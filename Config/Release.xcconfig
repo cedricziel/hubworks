@@ -1,0 +1,14 @@
+// Release Configuration
+
+#include "Base.xcconfig"
+
+// Build Settings
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule
+GCC_OPTIMIZATION_LEVEL = s
+ENABLE_TESTABILITY = NO
+VALIDATE_PRODUCT = YES
+
+// Code Signing - managed by Xcode automatic signing
+// CODE_SIGN_IDENTITY is intentionally omitted for CODE_SIGN_STYLE = Automatic
