@@ -181,12 +181,12 @@ extension GitHubAPIClient: DependencyKey {
                     throw GitHubAPIError.invalidURL
                 }
 
-                // Paginate through all results (max 20 pages = 2000 notifications)
-                // GitHub rate limit is 5000/hour, so this is fine
-                let maxPages = 20
+                // Paginate through all results until no more pages
+                // Safety limit of 50 pages (5000 notifications) to prevent runaway requests
                 var pageCount = 0
+                let safetyLimit = 50
 
-                while pageCount < maxPages {
+                while pageCount < safetyLimit {
                     pageCount += 1
 
                     var request = URLRequest(url: currentURL)
