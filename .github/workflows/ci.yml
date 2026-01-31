@@ -67,8 +67,8 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
-  test-ios:
-    name: Run iOS Tests
+  test:
+    name: Run Tests
     runs-on: macos-26
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -85,40 +85,12 @@ jobs:
           cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
           make generate
 
-      - name: Run iOS Tests
+      - name: Run Tests
         run: |
           xcodebuild test \
             -project HubWorks.xcodeproj \
             -scheme HubWorks-iOS \
             -destination 'platform=iOS Simulator,name=iPhone 17' \
-            -configuration Debug \
-            -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO
-
-  test-macos:
-    name: Run macOS Tests
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-
-      - name: Show Swift version
-        run: swift --version
-
-      - name: Generate Xcode project
-        run: |
-          brew install xcodegen
-          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-          make generate
-
-      - name: Run macOS Tests
-        run: |
-          xcodebuild test \
-            -project HubWorks.xcodeproj \
-            -scheme HubWorks-macOS \
-            -destination 'platform=macOS' \
             -configuration Debug \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
