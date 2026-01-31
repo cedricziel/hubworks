@@ -18,43 +18,43 @@ public enum NotificationSubjectType: String, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .issue: "Issue"
-        case .pullRequest: "Pull Request"
-        case .release: "Release"
-        case .discussion: "Discussion"
-        case .commit: "Commit"
-        case .repositoryInvitation: "Invitation"
-        case .securityAdvisory: "Security Advisory"
-        case .checkSuite: "Check Suite"
-        case .unknown: "Notification"
+            case .issue: "Issue"
+            case .pullRequest: "Pull Request"
+            case .release: "Release"
+            case .discussion: "Discussion"
+            case .commit: "Commit"
+            case .repositoryInvitation: "Invitation"
+            case .securityAdvisory: "Security Advisory"
+            case .checkSuite: "Check Suite"
+            case .unknown: "Notification"
         }
     }
 
     public var systemImage: String {
         switch self {
-        case .issue: "circle.circle"
-        case .pullRequest: "arrow.triangle.pull"
-        case .release: "tag"
-        case .discussion: "bubble.left.and.bubble.right"
-        case .commit: "point.topleft.down.to.point.bottomright.curvepath"
-        case .repositoryInvitation: "envelope"
-        case .securityAdvisory: "exclamationmark.shield"
-        case .checkSuite: "checkmark.circle"
-        case .unknown: "bell"
+            case .issue: "circle.circle"
+            case .pullRequest: "arrow.triangle.pull"
+            case .release: "tag"
+            case .discussion: "bubble.left.and.bubble.right"
+            case .commit: "point.topleft.down.to.point.bottomright.curvepath"
+            case .repositoryInvitation: "envelope"
+            case .securityAdvisory: "exclamationmark.shield"
+            case .checkSuite: "checkmark.circle"
+            case .unknown: "bell"
         }
     }
 }
 
 @Model
 public final class CachedNotification {
-    // CloudKit doesn't support unique constraints - we handle uniqueness in app logic
+    /// CloudKit doesn't support unique constraints - we handle uniqueness in app logic
     public var id: String = UUID().uuidString
 
     public var threadId: String = ""
     public var accountId: String = ""
     public var unread: Bool = true
     public var reasonRaw: String = NotificationReason.subscribed.rawValue
-    public var updatedAt: Date = Date.now
+    public var updatedAt = Date.now
     public var lastReadAt: Date?
 
     public var subjectTitle: String = ""
@@ -69,7 +69,12 @@ public final class CachedNotification {
     public var repositoryAvatarURL: String?
     public var isPrivateRepository: Bool = false
 
-    public var fetchedAt: Date = Date.now
+    public var fetchedAt = Date.now
+
+    // Local state (also synced via CloudKit)
+    public var isSnoozed: Bool = false
+    public var snoozeUntil: Date?
+    public var isArchived: Bool = false
 
     public init(
         id: String = UUID().uuidString,
@@ -89,17 +94,20 @@ public final class CachedNotification {
         repositoryOwner: String,
         repositoryAvatarURL: String? = nil,
         isPrivateRepository: Bool,
-        fetchedAt: Date = .now
+        fetchedAt: Date = .now,
+        isSnoozed: Bool = false,
+        snoozeUntil: Date? = nil,
+        isArchived: Bool = false
     ) {
         self.id = id
         self.threadId = threadId
         self.accountId = accountId
         self.unread = unread
-        self.reasonRaw = reason.rawValue
+        reasonRaw = reason.rawValue
         self.updatedAt = updatedAt
         self.lastReadAt = lastReadAt
         self.subjectTitle = subjectTitle
-        self.subjectTypeRaw = subjectType.rawValue
+        subjectTypeRaw = subjectType.rawValue
         self.subjectURL = subjectURL
         self.latestCommentURL = latestCommentURL
         self.repositoryId = repositoryId
@@ -109,6 +117,9 @@ public final class CachedNotification {
         self.repositoryAvatarURL = repositoryAvatarURL
         self.isPrivateRepository = isPrivateRepository
         self.fetchedAt = fetchedAt
+        self.isSnoozed = isSnoozed
+        self.snoozeUntil = snoozeUntil
+        self.isArchived = isArchived
     }
 }
 

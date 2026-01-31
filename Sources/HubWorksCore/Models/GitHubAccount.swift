@@ -3,19 +3,18 @@ import SwiftData
 
 @Model
 public final class GitHubAccount {
-    // CloudKit doesn't support unique constraints - we handle uniqueness in app logic
+    /// CloudKit doesn't support unique constraints - we handle uniqueness in app logic
     public var id: String = UUID().uuidString
 
     public var username: String = ""
     public var avatarURL: URL?
     public var email: String?
     public var displayName: String?
-    public var createdAt: Date = Date.now
-    public var updatedAt: Date = Date.now
+    public var createdAt = Date.now
+    public var updatedAt = Date.now
 
-    // CloudKit requires optional relationships
-    @Relationship(deleteRule: .nullify, inverse: \NotificationScope.accounts)
-    public var scopes: [NotificationScope]?
+    /// CloudKit requires optional relationships
+    @Relationship(deleteRule: .nullify, inverse: \NotificationScope.accounts) public var scopes: [NotificationScope]?
 
     public var lastNotificationFetchedAt: Date?
     public var lastModifiedHeader: String?

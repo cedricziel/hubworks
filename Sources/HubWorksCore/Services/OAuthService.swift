@@ -33,7 +33,7 @@ enum WebAuthManager {
         }
     }
 
-    // Static storage to keep presenter alive during auth
+    /// Static storage to keep presenter alive during auth
     private nonisolated(unsafe) static var currentPresenter: Presenter?
 
     static func startSession(_ session: ASWebAuthenticationSession) {
@@ -62,13 +62,14 @@ enum WebAuthManager {
             guard let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first(where: { $0.activationState == .foregroundActive }),
-                  let window = windowScene.windows.first(where: { $0.isKeyWindow })
+                let window = windowScene.windows.first(where: { $0.isKeyWindow })
             else {
                 // Fallback: try to find any visible window
                 if let windowScene = UIApplication.shared.connectedScenes
                     .compactMap({ $0 as? UIWindowScene })
                     .first,
-                   let window = windowScene.windows.first {
+                    let window = windowScene.windows.first
+                {
                     return window
                 }
                 fatalError("No window available for authentication")
@@ -77,7 +78,7 @@ enum WebAuthManager {
         }
     }
 
-    // Static storage to keep presenter alive during auth
+    /// Static storage to keep presenter alive during auth
     private nonisolated(unsafe) static var currentPresenter: Presenter?
 
     static func startSession(_ session: ASWebAuthenticationSession) {
@@ -204,28 +205,28 @@ public enum OAuthError: Error, Equatable, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .configurationMissing:
-            return "GitHub OAuth is not configured. Please set GITHUB_CLIENT_ID."
-        case .authorizationFailed(let message):
-            return "Authorization failed: \(message)"
-        case .tokenExchangeFailed(let message):
-            return "Token exchange failed: \(message)"
-        case .invalidCallbackURL:
-            return "Invalid callback URL from GitHub"
-        case .invalidState:
-            return "Security validation failed (state mismatch)"
-        case .userCancelled:
-            return "Sign in was cancelled"
-        case .deviceFlowNotEnabled:
-            return "Device flow is not enabled for this OAuth app"
-        case .authorizationPending:
-            return "Waiting for authorization..."
-        case .slowDown:
-            return "Too many requests, slowing down..."
-        case .accessDenied:
-            return "Access was denied"
-        case .expiredToken:
-            return "The authorization code has expired"
+            case .configurationMissing:
+                "GitHub OAuth is not configured. Please set GITHUB_CLIENT_ID."
+            case let .authorizationFailed(message):
+                "Authorization failed: \(message)"
+            case let .tokenExchangeFailed(message):
+                "Token exchange failed: \(message)"
+            case .invalidCallbackURL:
+                "Invalid callback URL from GitHub"
+            case .invalidState:
+                "Security validation failed (state mismatch)"
+            case .userCancelled:
+                "Sign in was cancelled"
+            case .deviceFlowNotEnabled:
+                "Device flow is not enabled for this OAuth app"
+            case .authorizationPending:
+                "Waiting for authorization..."
+            case .slowDown:
+                "Too many requests, slowing down..."
+            case .accessDenied:
+                "Access was denied"
+            case .expiredToken:
+                "The authorization code has expired"
         }
     }
 }
@@ -260,7 +261,9 @@ public struct OAuthService: Sendable {
     ) -> AsyncStream<DeviceFlowStatus> = { _, _, _, _ in .finished }
 
     /// Authorize using Device Flow (combines requestDeviceCode + pollForDeviceToken)
-    public var authorizeWithDeviceFlow: @Sendable (_ configuration: OAuthConfiguration) -> AsyncStream<DeviceFlowStatus> = { _ in .finished }
+    public var authorizeWithDeviceFlow: @Sendable (_ configuration: OAuthConfiguration) -> AsyncStream<DeviceFlowStatus> = { _ in
+        .finished
+    }
 }
 
 // MARK: - Live Implementation
@@ -314,7 +317,9 @@ extension OAuthService: DependencyKey {
         let pkceState = PKCEState()
 
         return OAuthService(
+
             // MARK: Web Flow Authorization
+
             authorize: { configuration in
                 let (verifier, challenge, state) = await pkceState.generate()
 
@@ -336,13 +341,13 @@ extension OAuthService: DependencyKey {
                     let session = ASWebAuthenticationSession(
                         url: authURL,
                         callbackURLScheme: "hubworks"
-                    ) { callbackURL, error in 
+                    ) { callbackURL, error in
                         if let error = error as? ASWebAuthenticationSessionError {
                             switch error.code {
-                            case .canceledLogin:
-                                continuation.resume(throwing: OAuthError.userCancelled)
-                            default:
-                                continuation.resume(throwing: OAuthError.authorizationFailed(error.localizedDescription))
+                                case .canceledLogin:
+                                    continuation.resume(throwing: OAuthError.userCancelled)
+                                default:
+                                    continuation.resume(throwing: OAuthError.authorizationFailed(error.localizedDescription))
                             }
                             return
                         }
@@ -393,7 +398,7 @@ extension OAuthService: DependencyKey {
                     "client_id=\(configuration.clientId)",
                     "code=\(code)",
                     "redirect_uri=\(configuration.redirectURI)",
-                    "code_verifier=\(verifier)"
+                    "code_verifier=\(verifier)",
                 ]
                 // Add client_secret for traditional OAuth Apps
                 if let clientSecret = configuration.clientSecret, !clientSecret.isEmpty {
@@ -410,7 +415,8 @@ extension OAuthService: DependencyKey {
 
                 // Check for error response from GitHub
                 if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let error = errorJson["error"] as? String {
+                   let error = errorJson["error"] as? String
+                {
                     let description = errorJson["error_description"] as? String ?? error
                     throw OAuthError.tokenExchangeFailed(description)
                 }
@@ -429,6 +435,7 @@ extension OAuthService: DependencyKey {
             },
 
             // MARK: Exchange Code
+
             exchangeCode: { code, codeVerifier, configuration in
                 let tokenURL = URL(string: "https://github.com/login/oauth/access_token")!
 
@@ -441,7 +448,7 @@ extension OAuthService: DependencyKey {
                     "client_id=\(configuration.clientId)",
                     "code=\(code)",
                     "redirect_uri=\(configuration.redirectURI)",
-                    "code_verifier=\(codeVerifier)"
+                    "code_verifier=\(codeVerifier)",
                 ]
                 if let clientSecret = configuration.clientSecret, !clientSecret.isEmpty {
                     bodyParamsList.append("client_secret=\(clientSecret)")
@@ -460,6 +467,7 @@ extension OAuthService: DependencyKey {
             },
 
             // MARK: Device Flow - Request Code
+
             requestDeviceCode: { configuration in
                 let url = URL(string: "https://github.com/login/device/code")!
 
@@ -488,6 +496,7 @@ extension OAuthService: DependencyKey {
             },
 
             // MARK: Device Flow - Poll for Token
+
             pollForDeviceToken: { deviceCode, interval, expiresIn, configuration in
                 AsyncStream { continuation in
                     Task {
@@ -526,30 +535,30 @@ extension OAuthService: DependencyKey {
                                    let error = json["error"] as? String
                                 {
                                     switch error {
-                                    case "authorization_pending":
-                                        // User hasn't entered code yet, continue polling
-                                        continue
+                                        case "authorization_pending":
+                                            // User hasn't entered code yet, continue polling
+                                            continue
 
-                                    case "slow_down":
-                                        // Increase polling interval
-                                        currentInterval += 5
-                                        continue
+                                        case "slow_down":
+                                            // Increase polling interval
+                                            currentInterval += 5
+                                            continue
 
-                                    case "expired_token":
-                                        continuation.yield(.expired)
-                                        continuation.finish()
-                                        return
+                                        case "expired_token":
+                                            continuation.yield(.expired)
+                                            continuation.finish()
+                                            return
 
-                                    case "access_denied":
-                                        continuation.yield(.denied)
-                                        continuation.finish()
-                                        return
+                                        case "access_denied":
+                                            continuation.yield(.denied)
+                                            continuation.finish()
+                                            return
 
-                                    default:
-                                        let description = json["error_description"] as? String ?? error
-                                        continuation.yield(.error(description))
-                                        continuation.finish()
-                                        return
+                                        default:
+                                            let description = json["error_description"] as? String ?? error
+                                            continuation.yield(.error(description))
+                                            continuation.finish()
+                                            return
                                     }
                                 }
                             } catch {
@@ -567,6 +576,7 @@ extension OAuthService: DependencyKey {
             },
 
             // MARK: Device Flow - Full Authorization
+
             authorizeWithDeviceFlow: { configuration in
                 AsyncStream { continuation in
                     Task {
@@ -635,24 +645,24 @@ extension OAuthService: DependencyKey {
                                    let error = json["error"] as? String
                                 {
                                     switch error {
-                                    case "authorization_pending":
-                                        continue
-                                    case "slow_down":
-                                        currentInterval += 5
-                                        continue
-                                    case "expired_token":
-                                        continuation.yield(.expired)
-                                        continuation.finish()
-                                        return
-                                    case "access_denied":
-                                        continuation.yield(.denied)
-                                        continuation.finish()
-                                        return
-                                    default:
-                                        let description = json["error_description"] as? String ?? error
-                                        continuation.yield(.error(description))
-                                        continuation.finish()
-                                        return
+                                        case "authorization_pending":
+                                            continue
+                                        case "slow_down":
+                                            currentInterval += 5
+                                            continue
+                                        case "expired_token":
+                                            continuation.yield(.expired)
+                                            continuation.finish()
+                                            return
+                                        case "access_denied":
+                                            continuation.yield(.denied)
+                                            continuation.finish()
+                                            return
+                                        default:
+                                            let description = json["error_description"] as? String ?? error
+                                            continuation.yield(.error(description))
+                                            continuation.finish()
+                                            return
                                     }
                                 }
                             }

@@ -41,55 +41,55 @@ struct WatchAppFeature: Sendable {
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .onAppear:
-                state.isLoading = true
-                return .send(.refresh)
+                case .onAppear:
+                    state.isLoading = true
+                    return .send(.refresh)
 
-            case let .notificationsReceived(notifications):
-                state.notifications = notifications
-                state.isLoading = false
-                state.error = nil
-                return .none
+                case let .notificationsReceived(notifications):
+                    state.notifications = notifications
+                    state.isLoading = false
+                    state.error = nil
+                    return .none
 
-            case let .error(message):
-                state.error = message
-                state.isLoading = false
-                return .none
+                case let .error(message):
+                    state.error = message
+                    state.isLoading = false
+                    return .none
 
-            case let .markAsRead(id):
-                if let index = state.notifications.firstIndex(where: { $0.id == id }) {
-                    state.notifications[index].isUnread = false
-                }
-                return .run { _ in
-                    guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
-                        return
+                case let .markAsRead(id):
+                    if let index = state.notifications.firstIndex(where: { $0.id == id }) {
+                        state.notifications[index].isUnread = false
                     }
-                    try await gitHubAPIClient.markAsRead(token, id)
-                }
-
-            case .refresh:
-                return .run { send in
-                    do {
+                    return .run { _ in
                         guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
-                            await send(.error("Not authenticated"))
                             return
                         }
-
-                        let result = try await gitHubAPIClient.fetchNotifications(token, nil, false, false)
-                        let notifications = result.notifications.prefix(10).map { notification in
-                            WatchNotification(
-                                id: notification.id,
-                                title: notification.subject.title,
-                                repository: notification.repository.name,
-                                reason: notification.reason,
-                                isUnread: notification.unread
-                            )
-                        }
-                        await send(.notificationsReceived(Array(notifications)))
-                    } catch {
-                        await send(.error(error.localizedDescription))
+                        try await gitHubAPIClient.markAsRead(token, id)
                     }
-                }
+
+                case .refresh:
+                    return .run { send in
+                        do {
+                            guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
+                                await send(.error("Not authenticated"))
+                                return
+                            }
+
+                            let result = try await gitHubAPIClient.fetchNotifications(token, nil, false, false)
+                            let notifications = result.notifications.prefix(10).map { notification in
+                                WatchNotification(
+                                    id: notification.id,
+                                    title: notification.subject.title,
+                                    repository: notification.repository.name,
+                                    reason: notification.reason,
+                                    isUnread: notification.unread
+                                )
+                            }
+                            await send(.notificationsReceived(Array(notifications)))
+                        } catch {
+                            await send(.error(error.localizedDescription))
+                        }
+                    }
             }
         }
     }

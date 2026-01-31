@@ -65,53 +65,53 @@ public struct AppFeature: Sendable {
 
         Reduce { state, action in
             switch action {
-            case .onAppear:
-                return .run { send in
-                    // Check if we have any stored tokens
-                    let hasToken = keychainService.exists("github_oauth_token_default")
-                    await send(.checkAuthenticationCompleted(hasToken))
-                }
+                case .onAppear:
+                    return .run { send in
+                        // Check if we have any stored tokens
+                        let hasToken = keychainService.exists("github_oauth_token_default")
+                        await send(.checkAuthenticationCompleted(hasToken))
+                    }
 
-            case let .checkAuthenticationCompleted(isAuthenticated):
-                state.isAuthenticated = isAuthenticated
-                state.isLoading = false
+                case let .checkAuthenticationCompleted(isAuthenticated):
+                    state.isAuthenticated = isAuthenticated
+                    state.isLoading = false
 
-                if isAuthenticated {
+                    if isAuthenticated {
+                        return .send(.inbox(.startPolling))
+                    }
+                    return .none
+
+                case let .tabSelected(tab):
+                    state.selectedTab = tab
+                    return .none
+
+                case .inbox:
+                    return .none
+
+                case .settings:
+                    return .none
+
+                case .auth(.authenticationCompleted):
+                    state.isAuthenticated = true
                     return .send(.inbox(.startPolling))
-                }
-                return .none
 
-            case let .tabSelected(tab):
-                state.selectedTab = tab
-                return .none
+                case .auth(.signOutCompleted):
+                    state.isAuthenticated = false
+                    state.inbox = .init()
+                    return .none
 
-            case .inbox:
-                return .none
+                case .auth:
+                    return .none
 
-            case .settings:
-                return .none
+                case .backgroundRefreshTriggered:
+                    return .run { send in
+                        // Trigger background poll
+                        await send(.inbox(.pollNow))
+                        await send(.backgroundRefreshCompleted(true))
+                    }
 
-            case .auth(.authenticationCompleted):
-                state.isAuthenticated = true
-                return .send(.inbox(.startPolling))
-
-            case .auth(.signOutCompleted):
-                state.isAuthenticated = false
-                state.inbox = .init()
-                return .none
-
-            case .auth:
-                return .none
-
-            case .backgroundRefreshTriggered:
-                return .run { send in
-                    // Trigger background poll
-                    await send(.inbox(.pollNow))
-                    await send(.backgroundRefreshCompleted(true))
-                }
-
-            case .backgroundRefreshCompleted:
-                return .none
+                case .backgroundRefreshCompleted:
+                    return .none
             }
         }
     }

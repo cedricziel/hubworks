@@ -1,11 +1,11 @@
 import ComposableArchitecture
-@testable import HubWorksCore
 import Testing
+@testable import HubWorksCore
 
 @Suite("GitHubAPIClient Tests")
 struct GitHubAPIClientTests {
     @Test("Fetch notifications returns parsed data")
-    func fetchNotifications() async throws {
+    func fetchNotifications() {
         let client = withDependencies {
             $0.gitHubAPIClient = .testValue
         } operation: {
@@ -17,12 +17,12 @@ struct GitHubAPIClientTests {
     }
 
     @Test("Mark as read succeeds")
-    func markAsRead() async throws {
+    func markAsRead() {
         // Test implementation
     }
 
     @Test("Handles rate limiting")
-    func rateLimiting() async throws {
+    func rateLimiting() {
         // Test implementation
     }
 }

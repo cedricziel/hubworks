@@ -17,25 +17,25 @@ public struct KeychainError: Error, Equatable, Sendable, LocalizedError {
 
     private static func message(for status: OSStatus) -> String {
         switch status {
-        case errSecSuccess:
-            return "Success"
-        case errSecItemNotFound:
-            return "Item not found"
-        case errSecDuplicateItem:
-            return "Duplicate item"
-        case errSecAuthFailed:
-            return "Authentication failed"
-        case errSecInteractionNotAllowed:
-            return "User interaction not allowed"
-        case errSecParam:
-            return "Invalid parameter"
-        case errSecMissingEntitlement:
-            return "Missing entitlement for keychain access"
-        default:
-            if let message = SecCopyErrorMessageString(status, nil) as String? {
-                return message
-            }
-            return "Keychain error (OSStatus: \(status))"
+            case errSecSuccess:
+                return "Success"
+            case errSecItemNotFound:
+                return "Item not found"
+            case errSecDuplicateItem:
+                return "Duplicate item"
+            case errSecAuthFailed:
+                return "Authentication failed"
+            case errSecInteractionNotAllowed:
+                return "User interaction not allowed"
+            case errSecParam:
+                return "Invalid parameter"
+            case errSecMissingEntitlement:
+                return "Missing entitlement for keychain access"
+            default:
+                if let message = SecCopyErrorMessageString(status, nil) as String? {
+                    return message
+                }
+                return "Keychain error (OSStatus: \(status))"
         }
     }
 }
@@ -75,7 +75,7 @@ extension KeychainService: DependencyKey {
         }
 
         return KeychainService(
-            save: { key, data, synchronizable in
+            save: { key, data, _ in
                 // First, try to delete any existing item to avoid conflicts
                 let deleteQuery = baseQuery(for: key)
                 SecItemDelete(deleteQuery as CFDictionary)
@@ -105,12 +105,12 @@ extension KeychainService: DependencyKey {
                 let status = SecItemCopyMatching(query as CFDictionary, &result)
 
                 switch status {
-                case errSecSuccess:
-                    return result as? Data
-                case errSecItemNotFound:
-                    return nil
-                default:
-                    throw KeychainError(status: status)
+                    case errSecSuccess:
+                        return result as? Data
+                    case errSecItemNotFound:
+                        return nil
+                    default:
+                        throw KeychainError(status: status)
                 }
             },
 

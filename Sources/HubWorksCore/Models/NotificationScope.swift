@@ -4,7 +4,7 @@ import SwiftUI
 
 @Model
 public final class NotificationScope {
-    // CloudKit doesn't support unique constraints - we handle uniqueness in app logic
+    /// CloudKit doesn't support unique constraints - we handle uniqueness in app logic
     public var id: String = UUID().uuidString
 
     public var name: String = ""
@@ -12,11 +12,10 @@ public final class NotificationScope {
     public var colorHex: String = "#007AFF"
     public var focusModeIdentifier: String?
 
-    // CloudKit requires optional relationships
+    /// CloudKit requires optional relationships
     public var accounts: [GitHubAccount]?
 
-    @Relationship(deleteRule: .cascade, inverse: \NotificationRule.scope)
-    public var rules: [NotificationRule]?
+    @Relationship(deleteRule: .cascade, inverse: \NotificationRule.scope) public var rules: [NotificationRule]?
 
     public var quietHoursEnabled: Bool = false
     public var quietHoursStart: Int = 22
@@ -25,8 +24,8 @@ public final class NotificationScope {
 
     public var isDefault: Bool = false
     public var sortOrder: Int = 0
-    public var createdAt: Date = Date.now
-    public var updatedAt: Date = Date.now
+    public var createdAt = Date.now
+    public var updatedAt = Date.now
 
     public init(
         id: String = UUID().uuidString,

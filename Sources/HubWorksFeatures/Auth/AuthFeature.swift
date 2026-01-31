@@ -10,7 +10,7 @@ public struct AuthFeature: Sendable {
         public var error: String?
         public var currentUser: GitHubUser?
 
-        // Device Flow state
+        /// Device Flow state
         public var deviceFlowStatus: DeviceFlowState?
 
         public struct DeviceFlowState: Equatable, Sendable {
@@ -65,121 +65,121 @@ public struct AuthFeature: Sendable {
             switch action {
             // MARK: - Web Flow
 
-            case .signInTapped:
-                state.isAuthenticating = true
-                state.error = nil
-                state.deviceFlowStatus = nil
+                case .signInTapped:
+                    state.isAuthenticating = true
+                    state.error = nil
+                    state.deviceFlowStatus = nil
 
-                return .run { send in
-                    do {
-                        let credentials = try await oauthService.authorize(.default)
-                        await send(.signInCompleted(credentials))
-                    } catch let error as OAuthError {
-                        switch error {
-                        case .userCancelled:
-                            await send(.signInFailed("Sign in cancelled"))
-                        default:
+                    return .run { send in
+                        do {
+                            let credentials = try await oauthService.authorize(.default)
+                            await send(.signInCompleted(credentials))
+                        } catch let error as OAuthError {
+                            switch error {
+                                case .userCancelled:
+                                    await send(.signInFailed("Sign in cancelled"))
+                                default:
+                                    await send(.signInFailed(error.localizedDescription))
+                            }
+                        } catch {
                             await send(.signInFailed(error.localizedDescription))
                         }
-                    } catch {
-                        await send(.signInFailed(error.localizedDescription))
                     }
-                }
 
-            case let .signInCompleted(credentials):
-                return .run { send in
-                    do {
-                        try keychainService.saveToken(
-                            credentials.accessToken,
-                            forKey: "github_oauth_token_default",
-                            synchronizable: false  // Disabled to avoid iCloud Keychain issues
-                        )
-                        let user = try await gitHubAPIClient.fetchCurrentUser(credentials.accessToken)
-                        await send(.authenticationCompleted(user))
-                    } catch {
-                        await send(.signInFailed(error.localizedDescription))
+                case let .signInCompleted(credentials):
+                    return .run { send in
+                        do {
+                            try keychainService.saveToken(
+                                credentials.accessToken,
+                                forKey: "github_oauth_token_default",
+                                synchronizable: false // Disabled to avoid iCloud Keychain issues
+                            )
+                            let user = try await gitHubAPIClient.fetchCurrentUser(credentials.accessToken)
+                            await send(.authenticationCompleted(user))
+                        } catch {
+                            await send(.signInFailed(error.localizedDescription))
+                        }
                     }
-                }
 
-            case let .signInFailed(error):
-                state.isAuthenticating = false
-                state.deviceFlowStatus = nil
-                state.error = error
-                return .none
+                case let .signInFailed(error):
+                    state.isAuthenticating = false
+                    state.deviceFlowStatus = nil
+                    state.error = error
+                    return .none
 
             // MARK: - Device Flow
 
-            case .signInWithDeviceFlowTapped:
-                state.isAuthenticating = true
-                state.error = nil
-                state.deviceFlowStatus = nil
+                case .signInWithDeviceFlowTapped:
+                    state.isAuthenticating = true
+                    state.error = nil
+                    state.deviceFlowStatus = nil
 
-                return .run { send in
-                    for await status in oauthService.authorizeWithDeviceFlow(.default) {
-                        await send(.deviceFlowStatusUpdated(status))
+                    return .run { send in
+                        for await status in oauthService.authorizeWithDeviceFlow(.default) {
+                            await send(.deviceFlowStatusUpdated(status))
+                        }
                     }
-                }
 
-            case let .deviceFlowStatusUpdated(status):
-                switch status {
-                case let .waitingForUser(userCode, verificationUri, expiresAt):
-                    state.deviceFlowStatus = .init(
-                        userCode: userCode,
-                        verificationUri: verificationUri,
-                        expiresAt: expiresAt
-                    )
-                    return .none
+                case let .deviceFlowStatusUpdated(status):
+                    switch status {
+                        case let .waitingForUser(userCode, verificationUri, expiresAt):
+                            state.deviceFlowStatus = .init(
+                                userCode: userCode,
+                                verificationUri: verificationUri,
+                                expiresAt: expiresAt
+                            )
+                            return .none
 
-                case let .authorized(credentials):
-                    state.deviceFlowStatus = nil
-                    return .send(.signInCompleted(credentials))
+                        case let .authorized(credentials):
+                            state.deviceFlowStatus = nil
+                            return .send(.signInCompleted(credentials))
 
-                case .denied:
-                    state.isAuthenticating = false
-                    state.deviceFlowStatus = nil
-                    state.error = "Access denied. Please try again."
-                    return .none
+                        case .denied:
+                            state.isAuthenticating = false
+                            state.deviceFlowStatus = nil
+                            state.error = "Access denied. Please try again."
+                            return .none
 
-                case .expired:
-                    state.isAuthenticating = false
-                    state.deviceFlowStatus = nil
-                    state.error = "Code expired. Please try again."
-                    return .none
+                        case .expired:
+                            state.isAuthenticating = false
+                            state.deviceFlowStatus = nil
+                            state.error = "Code expired. Please try again."
+                            return .none
 
-                case let .error(message):
-                    state.isAuthenticating = false
-                    state.deviceFlowStatus = nil
-                    state.error = message
-                    return .none
-                }
+                        case let .error(message):
+                            state.isAuthenticating = false
+                            state.deviceFlowStatus = nil
+                            state.error = message
+                            return .none
+                    }
 
             // MARK: - Common
 
-            case let .authenticationCompleted(user):
-                state.isAuthenticating = false
-                state.currentUser = user
-                state.error = nil
-                state.deviceFlowStatus = nil
-                return .none
+                case let .authenticationCompleted(user):
+                    state.isAuthenticating = false
+                    state.currentUser = user
+                    state.error = nil
+                    state.deviceFlowStatus = nil
+                    return .none
 
-            case .signOutTapped:
-                return .run { send in
-                    try? keychainService.delete("github_oauth_token_default")
-                    await send(.signOutCompleted)
-                }
+                case .signOutTapped:
+                    return .run { send in
+                        try? keychainService.delete("github_oauth_token_default")
+                        await send(.signOutCompleted)
+                    }
 
-            case .signOutCompleted:
-                state.currentUser = nil
-                return .none
+                case .signOutCompleted:
+                    state.currentUser = nil
+                    return .none
 
-            case .clearError:
-                state.error = nil
-                return .none
+                case .clearError:
+                    state.error = nil
+                    return .none
 
-            case .cancelAuthTapped:
-                state.isAuthenticating = false
-                state.deviceFlowStatus = nil
-                return .none
+                case .cancelAuthTapped:
+                    state.isAuthenticating = false
+                    state.deviceFlowStatus = nil
+                    return .none
             }
         }
     }

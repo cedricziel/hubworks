@@ -185,18 +185,18 @@ extension LocalNotificationService {
         let categoryId: String
 
         switch notification.reason {
-        case .mention, .teamMention:
-            title = "@\(accountUsername) mentioned in \(notification.repositoryFullName)"
-            categoryId = NotificationCategoryIdentifier.mentionNotification.rawValue
-        case .reviewRequested:
-            title = "Review requested in \(notification.repositoryFullName)"
-            categoryId = NotificationCategoryIdentifier.reviewRequestNotification.rawValue
-        case .assign:
-            title = "Assigned to you in \(notification.repositoryFullName)"
-            categoryId = NotificationCategoryIdentifier.notification.rawValue
-        default:
-            title = notification.repositoryFullName
-            categoryId = NotificationCategoryIdentifier.notification.rawValue
+            case .mention, .teamMention:
+                title = "@\(accountUsername) mentioned in \(notification.repositoryFullName)"
+                categoryId = NotificationCategoryIdentifier.mentionNotification.rawValue
+            case .reviewRequested:
+                title = "Review requested in \(notification.repositoryFullName)"
+                categoryId = NotificationCategoryIdentifier.reviewRequestNotification.rawValue
+            case .assign:
+                title = "Assigned to you in \(notification.repositoryFullName)"
+                categoryId = NotificationCategoryIdentifier.notification.rawValue
+            default:
+                title = notification.repositoryFullName
+                categoryId = NotificationCategoryIdentifier.notification.rawValue
         }
 
         return NotificationContent(

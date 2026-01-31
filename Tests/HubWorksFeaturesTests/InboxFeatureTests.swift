@@ -1,12 +1,12 @@
 import ComposableArchitecture
+import Testing
 @testable import HubWorksCore
 @testable import HubWorksFeatures
-import Testing
 
 @Suite("InboxFeature Tests")
 struct InboxFeatureTests {
     @Test("Filters notifications correctly")
-    func filterNotifications() async throws {
+    func filterNotifications() async {
         let store = TestStore(
             initialState: InboxFeature.State(
                 notifications: [
@@ -51,7 +51,7 @@ struct InboxFeatureTests {
     }
 
     @Test("Groups notifications by repository")
-    func groupByRepository() async throws {
+    func groupByRepository() {
         let state = InboxFeature.State(
             notifications: [
                 NotificationRowState(
@@ -89,7 +89,7 @@ struct InboxFeatureTests {
     }
 
     @Test("Marks notification as read")
-    func markAsRead() async throws {
+    func markAsRead() async {
         let store = TestStore(
             initialState: InboxFeature.State(
                 notifications: [

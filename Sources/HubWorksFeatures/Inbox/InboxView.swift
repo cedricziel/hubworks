@@ -1,13 +1,65 @@
 import ComposableArchitecture
 import HubWorksCore
 import HubWorksUI
+import SwiftData
 import SwiftUI
 
 public struct InboxView: View {
     @Bindable var store: StoreOf<InboxFeature>
 
+    /// Reactive SwiftData query - views automatically update when data changes
+    @Query(
+        filter: #Predicate<CachedNotification> { !$0.isArchived },
+        sort: [SortDescriptor(\CachedNotification.updatedAt, order: .reverse)]
+    ) private var notifications: [CachedNotification]
+
     public init(store: StoreOf<InboxFeature>) {
         self.store = store
+    }
+
+    // MARK: - Computed Properties from SwiftData
+
+    private var filteredNotifications: [CachedNotification] {
+        var result = notifications
+
+        // Apply repository filter first
+        if let repo = store.selectedRepository {
+            result = result.filter { $0.repositoryFullName == repo }
+        }
+
+        // Then apply type filter
+        switch store.filter {
+            case .all:
+                return result
+            case .unread:
+                return result.filter(\.unread)
+            case .participating:
+                return result.filter { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }
+            case .mentions:
+                return result.filter { $0.reason == .mention }
+        }
+    }
+
+    private var groupedNotifications: [(String, [CachedNotification])] {
+        guard store.groupByRepository else {
+            return [("All", filteredNotifications)]
+        }
+
+        let grouped = Dictionary(grouping: filteredNotifications) { $0.repositoryFullName }
+        return grouped
+            .sorted { $0.key < $1.key }
+            .map { ($0.key, $0.value) }
+    }
+
+    private var repositories: [(name: String, unreadCount: Int)] {
+        let grouped = Dictionary(grouping: notifications) { $0.repositoryFullName }
+        return grouped
+            .map { (name: $0.key, unreadCount: $0.value.filter(\.unread).count) }
+            .sorted { $0.name < $1.name }
+    }
+
+    private var unreadCount: Int {
+        notifications.filter(\.unread).count
     }
 
     public var body: some View {
@@ -24,9 +76,9 @@ public struct InboxView: View {
     private var iOSLayout: some View {
         NavigationStack {
             Group {
-                if store.isLoading && store.notifications.isEmpty {
+                if store.isLoading, notifications.isEmpty {
                     ProgressView("Loading notifications...")
-                } else if store.notifications.isEmpty {
+                } else if notifications.isEmpty {
                     emptyState
                 } else {
                     notificationList
@@ -42,8 +94,7 @@ public struct InboxView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var iOSToolbarContent: some ToolbarContent {
+    @ToolbarContentBuilder private var iOSToolbarContent: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Menu {
                 ForEach(InboxFeature.State.Filter.allCases, id: \.self) { filter in
@@ -64,7 +115,7 @@ public struct InboxView: View {
             } label: {
                 Label("Mark All Read", systemImage: "checkmark.circle")
             }
-            .disabled(store.unreadCount == 0)
+            .disabled(unreadCount == 0)
         }
     }
     #endif
@@ -80,10 +131,10 @@ public struct InboxView: View {
             VStack(spacing: 0) {
                 // Main content
                 Group {
-                    if store.isLoading && store.notifications.isEmpty {
+                    if store.isLoading, notifications.isEmpty {
                         ProgressView("Loading notifications...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if store.filteredNotifications.isEmpty {
+                    } else if filteredNotifications.isEmpty {
                         emptyState
                     } else {
                         notificationList
@@ -131,9 +182,9 @@ public struct InboxView: View {
             }
 
             // Repositories section
-            if !store.repositories.isEmpty {
+            if !repositories.isEmpty {
                 Section("Repositories") {
-                    ForEach(store.repositories, id: \.name) { repo in
+                    ForEach(repositories, id: \.name) { repo in
                         sidebarRow(
                             title: repo.name.components(separatedBy: "/").last ?? repo.name,
                             icon: "folder",
@@ -168,21 +219,21 @@ public struct InboxView: View {
 
     private func countFor(filter: InboxFeature.State.Filter) -> Int {
         switch filter {
-        case .all:
-            return store.notifications.count
-        case .unread:
-            return store.unreadCount
-        case .participating:
-            return store.notifications.filter { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }.count
-        case .mentions:
-            return store.notifications.filter { $0.reason == .mention }.count
+            case .all:
+                notifications.count
+            case .unread:
+                unreadCount
+            case .participating:
+                notifications.count { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }
+            case .mentions:
+                notifications.count { $0.reason == .mention }
         }
     }
 
     private var statusBar: some View {
         HStack {
-            if store.unreadCount > 0 {
-                Text("\(store.unreadCount) unread")
+            if unreadCount > 0 {
+                Text("\(unreadCount) unread")
                     .foregroundStyle(.secondary)
             } else {
                 Text("All caught up")
@@ -196,7 +247,19 @@ public struct InboxView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let progress = store.loadingProgress {
+                Text("·")
+                    .foregroundStyle(.tertiary)
+                Text(progress)
+                    .foregroundStyle(.secondary)
+            }
+
             Spacer()
+
+            // Rate limit indicator
+            if let rateLimit = store.rateLimit {
+                rateLimitView(rateLimit)
+            }
 
             if store.isRefreshing {
                 ProgressView()
@@ -210,8 +273,31 @@ public struct InboxView: View {
         .background(.bar)
     }
 
-    @ToolbarContentBuilder
-    private var macOSToolbarContent: some ToolbarContent {
+    private func rateLimitView(_ rateLimit: RateLimitInfo) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(rateLimitColor(rateLimit))
+                .frame(width: 6, height: 6)
+
+            Text("\(rateLimit.remaining)/\(rateLimit.limit)")
+                .foregroundStyle(rateLimit.isLow ? .orange : .secondary)
+        }
+        .help(
+            "API Rate Limit: \(rateLimit.remaining) of \(rateLimit.limit) requests remaining. Resets \(rateLimit.reset, format: .relative(presentation: .named))"
+        )
+    }
+
+    private func rateLimitColor(_ rateLimit: RateLimitInfo) -> Color {
+        if rateLimit.percentRemaining > 0.5 {
+            .green
+        } else if rateLimit.percentRemaining > 0.1 {
+            .yellow
+        } else {
+            .red
+        }
+    }
+
+    @ToolbarContentBuilder private var macOSToolbarContent: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Button {
                 store.send(.refresh)
@@ -227,24 +313,23 @@ public struct InboxView: View {
             } label: {
                 Label("Mark All Read", systemImage: "checkmark.circle")
             }
-            .disabled(store.unreadCount == 0)
+            .disabled(unreadCount == 0)
             .keyboardShortcut("u", modifiers: [.command, .shift])
         }
 
         ToolbarItem(placement: .primaryAction) {
             Button {
-                store.send(.archiveAll)
+                store.send(.archiveAll(filteredNotifications.map(\.threadId)))
             } label: {
                 Label("Archive All", systemImage: "archivebox")
             }
-            .disabled(store.filteredNotifications.isEmpty)
+            .disabled(filteredNotifications.isEmpty)
         }
     }
     #endif
 
     // MARK: - Shared Views
 
-    @ViewBuilder
     private var emptyState: some View {
         ContentUnavailableView {
             Label("No Notifications", systemImage: "tray")
@@ -257,25 +342,24 @@ public struct InboxView: View {
         }
     }
 
-    @ViewBuilder
-    private var notificationList: some View {
+    @ViewBuilder private var notificationList: some View {
         List {
-            ForEach(store.groupedNotifications, id: \.0) { group in
+            ForEach(groupedNotifications, id: \.0) { group in
                 Section(header: Text(group.0)) {
-                    ForEach(group.1) { notification in
-                        NotificationRowView(
+                    ForEach(group.1, id: \.threadId) { notification in
+                        CachedNotificationRowView(
                             notification: notification,
                             onTap: {
-                                store.send(.notificationTapped(notification.id))
+                                store.send(.notificationTapped(notification.threadId))
                             },
                             onMarkAsRead: {
-                                store.send(.markAsRead(notification.id))
+                                store.send(.markAsRead(notification.threadId))
                             },
                             onArchive: {
-                                store.send(.archive(notification.id))
+                                store.send(.archive(notification.threadId))
                             },
                             onSnooze: { date in
-                                store.send(.snooze(notification.id, date))
+                                store.send(.snooze(notification.threadId, date))
                             }
                         )
                     }
@@ -288,7 +372,7 @@ public struct InboxView: View {
         .listStyle(.inset)
         #endif
         .overlay {
-            if store.isRefreshing && !store.notifications.isEmpty {
+            if store.isRefreshing, !notifications.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .padding(.top, 60)

@@ -1,15 +1,15 @@
 import HubWorksCore
 import SwiftUI
 
-public struct NotificationRowView: View {
-    public let notification: NotificationRowState
+public struct CachedNotificationRowView: View {
+    public let notification: CachedNotification
     public let onTap: () -> Void
     public let onMarkAsRead: () -> Void
     public let onArchive: () -> Void
     public let onSnooze: (Date) -> Void
 
     public init(
-        notification: NotificationRowState,
+        notification: CachedNotification,
         onTap: @escaping () -> Void,
         onMarkAsRead: @escaping () -> Void,
         onArchive: @escaping () -> Void,
@@ -20,6 +20,10 @@ public struct NotificationRowView: View {
         self.onMarkAsRead = onMarkAsRead
         self.onArchive = onArchive
         self.onSnooze = onSnooze
+    }
+
+    private var avatarURL: URL? {
+        notification.repositoryAvatarURL.flatMap { URL(string: $0) }
     }
 
     public var body: some View {
@@ -62,7 +66,7 @@ public struct NotificationRowView: View {
 
     private var leadingContent: some View {
         ZStack {
-            if let avatarURL = notification.repositoryAvatarURL {
+            if let avatarURL {
                 AsyncImage(url: avatarURL) { image in
                     image
                         .resizable()
@@ -80,20 +84,27 @@ public struct NotificationRowView: View {
                     .frame(width: 40, height: 40)
             }
 
-            if notification.isUnread {
+            if notification.unread {
                 Circle()
                     .fill(.blue)
                     .frame(width: 10, height: 10)
                     .offset(x: 15, y: -15)
+            }
+
+            if notification.isSnoozed {
+                Image(systemName: "clock.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .offset(x: 15, y: 15)
             }
         }
     }
 
     private var mainContent: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(notification.title)
+            Text(notification.subjectTitle)
                 .font(.body)
-                .fontWeight(notification.isUnread ? .semibold : .regular)
+                .fontWeight(notification.unread ? .semibold : .regular)
                 .lineLimit(2)
                 .foregroundStyle(.primary)
 
@@ -126,7 +137,7 @@ public struct NotificationRowView: View {
     }
 
     @ViewBuilder private var contextMenuContent: some View {
-        if notification.isUnread {
+        if notification.unread {
             Button {
                 onMarkAsRead()
             } label: {
@@ -186,49 +197,5 @@ public struct NotificationRowView: View {
         } label: {
             Label("Copy Link", systemImage: "doc.on.doc")
         }
-    }
-}
-
-#Preview {
-    List {
-        NotificationRowView(
-            notification: NotificationRowState(
-                id: "1",
-                threadId: "1",
-                title: "Fix critical bug in authentication flow that causes crashes on iOS 17",
-                repositoryFullName: "apple/swift",
-                repositoryOwner: "apple",
-                repositoryAvatarURL: URL(string: "https://avatars.githubusercontent.com/u/10639145"),
-                subjectType: .pullRequest,
-                reason: .reviewRequested,
-                isUnread: true,
-                updatedAt: .now.addingTimeInterval(-3600),
-                webURL: URL(string: "https://github.com/apple/swift/pull/123")
-            ),
-            onTap: {},
-            onMarkAsRead: {},
-            onArchive: {},
-            onSnooze: { _ in }
-        )
-
-        NotificationRowView(
-            notification: NotificationRowState(
-                id: "2",
-                threadId: "2",
-                title: "Add new feature for handling notifications",
-                repositoryFullName: "pointfreeco/swift-composable-architecture",
-                repositoryOwner: "pointfreeco",
-                repositoryAvatarURL: nil,
-                subjectType: .issue,
-                reason: .mention,
-                isUnread: false,
-                updatedAt: .now.addingTimeInterval(-86400),
-                webURL: URL(string: "https://github.com/pointfreeco/swift-composable-architecture/issues/456")
-            ),
-            onTap: {},
-            onMarkAsRead: {},
-            onArchive: {},
-            onSnooze: { _ in }
-        )
     }
 }

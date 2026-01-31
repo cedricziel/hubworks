@@ -21,7 +21,6 @@ public struct AuthView: View {
 
     // MARK: - Sign In View
 
-    @ViewBuilder
     private var signInView: some View {
         VStack(spacing: 32) {
             Spacer()
@@ -57,7 +56,7 @@ public struct AuthView: View {
                     store.send(.signInTapped)
                 } label: {
                     HStack {
-                        if store.isAuthenticating && store.deviceFlowStatus == nil {
+                        if store.isAuthenticating, store.deviceFlowStatus == nil {
                             ProgressView()
                                 .tint(.white)
                         } else {
@@ -85,13 +84,13 @@ public struct AuthView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     #if os(watchOS)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
+                        .background(Color.accentColor)
+                        .foregroundStyle(.white)
                     #else
-                    .background(Color.secondary.opacity(0.1))
-                    .foregroundStyle(.primary)
+                        .background(Color.secondary.opacity(0.1))
+                        .foregroundStyle(.primary)
                     #endif
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(store.isAuthenticating)
 
@@ -107,7 +106,6 @@ public struct AuthView: View {
 
     // MARK: - Device Flow View
 
-    @ViewBuilder
     private func deviceFlowView(_ deviceFlow: AuthFeature.State.DeviceFlowState) -> some View {
         VStack(spacing: 24) {
             Spacer()

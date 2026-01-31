@@ -27,8 +27,7 @@ public struct AppView: View {
         }
     }
 
-    @ViewBuilder
-    private var authenticatedContent: some View {
+    @ViewBuilder private var authenticatedContent: some View {
         #if os(iOS)
         TabView(selection: $store.selectedTab.sending(\.tabSelected)) {
             InboxView(
@@ -58,14 +57,14 @@ public struct AppView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             switch store.selectedTab {
-            case .inbox:
-                InboxView(
-                    store: store.scope(state: \.inbox, action: \.inbox)
-                )
-            case .settings:
-                SettingsView(
-                    store: store.scope(state: \.settings, action: \.settings)
-                )
+                case .inbox:
+                    InboxView(
+                        store: store.scope(state: \.inbox, action: \.inbox)
+                    )
+                case .settings:
+                    SettingsView(
+                        store: store.scope(state: \.settings, action: \.settings)
+                    )
             }
         }
         #endif

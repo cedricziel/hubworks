@@ -17,42 +17,42 @@ public enum NotificationReason: String, Codable, CaseIterable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .assign: "Assigned"
-        case .author: "Author"
-        case .ciActivity: "CI Activity"
-        case .comment: "Comment"
-        case .invitation: "Invitation"
-        case .manual: "Manual"
-        case .mention: "Mention"
-        case .reviewRequested: "Review Requested"
-        case .securityAlert: "Security Alert"
-        case .stateChange: "State Change"
-        case .subscribed: "Subscribed"
-        case .teamMention: "Team Mention"
+            case .assign: "Assigned"
+            case .author: "Author"
+            case .ciActivity: "CI Activity"
+            case .comment: "Comment"
+            case .invitation: "Invitation"
+            case .manual: "Manual"
+            case .mention: "Mention"
+            case .reviewRequested: "Review Requested"
+            case .securityAlert: "Security Alert"
+            case .stateChange: "State Change"
+            case .subscribed: "Subscribed"
+            case .teamMention: "Team Mention"
         }
     }
 
     public var systemImage: String {
         switch self {
-        case .assign: "person.badge.plus"
-        case .author: "person.fill"
-        case .ciActivity: "gearshape.2"
-        case .comment: "text.bubble"
-        case .invitation: "envelope"
-        case .manual: "hand.tap"
-        case .mention: "at"
-        case .reviewRequested: "eye"
-        case .securityAlert: "exclamationmark.shield"
-        case .stateChange: "arrow.triangle.2.circlepath"
-        case .subscribed: "bell"
-        case .teamMention: "person.3"
+            case .assign: "person.badge.plus"
+            case .author: "person.fill"
+            case .ciActivity: "gearshape.2"
+            case .comment: "text.bubble"
+            case .invitation: "envelope"
+            case .manual: "hand.tap"
+            case .mention: "at"
+            case .reviewRequested: "eye"
+            case .securityAlert: "exclamationmark.shield"
+            case .stateChange: "arrow.triangle.2.circlepath"
+            case .subscribed: "bell"
+            case .teamMention: "person.3"
         }
     }
 }
 
 @Model
 public final class NotificationRule {
-    // CloudKit doesn't support unique constraints - we handle uniqueness in app logic
+    /// CloudKit doesn't support unique constraints - we handle uniqueness in app logic
     public var id: String = UUID().uuidString
 
     public var repositoryPattern: String?
@@ -61,8 +61,8 @@ public final class NotificationRule {
     public var sendPushNotification: Bool = true
     public var isHighPriority: Bool = false
     public var isMuted: Bool = false
-    public var createdAt: Date = Date.now
-    public var updatedAt: Date = Date.now
+    public var createdAt = Date.now
+    public var updatedAt = Date.now
 
     public var scope: NotificationScope?
 
@@ -81,7 +81,7 @@ public final class NotificationRule {
         self.id = id
         self.repositoryPattern = repositoryPattern
         self.organizationPattern = organizationPattern
-        self.reasonsRaw = reasons.map(\.rawValue)
+        reasonsRaw = reasons.map(\.rawValue)
         self.sendPushNotification = sendPushNotification
         self.isHighPriority = isHighPriority
         self.isMuted = isMuted
@@ -107,13 +107,15 @@ extension NotificationRule {
         reason: NotificationReason
     ) -> Bool {
         if let repoPattern = repositoryPattern,
-           !matchesPattern(repoPattern, value: repository) {
+           !matchesPattern(repoPattern, value: repository)
+        {
             return false
         }
 
         if let orgPattern = organizationPattern,
            let org = organization,
-           !matchesPattern(orgPattern, value: org) {
+           !matchesPattern(orgPattern, value: org)
+        {
             return false
         }
 

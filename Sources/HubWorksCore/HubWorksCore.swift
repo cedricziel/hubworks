@@ -10,6 +10,7 @@ public enum HubWorksCore {
             NotificationRule.self,
             ReadState.self,
             CachedNotification.self,
+            SyncState.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
@@ -32,6 +33,7 @@ public enum HubWorksCore {
             NotificationRule.self,
             ReadState.self,
             CachedNotification.self,
+            SyncState.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

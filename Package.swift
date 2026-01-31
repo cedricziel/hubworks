@@ -8,7 +8,7 @@ let package = Package(
     platforms: [
         .iOS(.v26),
         .macOS(.v26),
-        .watchOS(.v26)
+        .watchOS(.v26),
     ],
     products: [
         .library(
@@ -28,7 +28,9 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.17.0"),
     ],
     targets: [
+
         // MARK: - Core
+
         .target(
             name: "HubWorksCore",
             dependencies: [
@@ -43,6 +45,7 @@ let package = Package(
         ),
 
         // MARK: - Features
+
         .target(
             name: "HubWorksFeatures",
             dependencies: [
@@ -59,6 +62,7 @@ let package = Package(
         ),
 
         // MARK: - UI
+
         .target(
             name: "HubWorksUI",
             dependencies: [

@@ -24,8 +24,10 @@ struct HubWorksApp: App {
         // Menu bar extra for quick access
         MenuBarExtra {
             MenuBarContentView(store: store)
+                .modelContainer(HubWorksCore.modelContainer)
         } label: {
             MenuBarIcon(store: store)
+                .modelContainer(HubWorksCore.modelContainer)
         }
         .menuBarExtraStyle(.window)
 
@@ -71,11 +73,17 @@ struct MainWindowView: View {
 struct MenuBarIcon: View {
     let store: StoreOf<AppFeature>
 
+    /// Reactive SwiftData query for unread count
+    @Query(
+        filter: #Predicate<CachedNotification> { $0.unread && !$0.isArchived },
+        sort: [SortDescriptor(\CachedNotification.updatedAt, order: .reverse)]
+    ) private var unreadNotifications: [CachedNotification]
+
     var body: some View {
         HStack(spacing: 2) {
-            Image(systemName: store.inbox.unreadCount > 0 ? "bell.badge.fill" : "bell")
-            if store.inbox.unreadCount > 0 {
-                Text("\(store.inbox.unreadCount)")
+            Image(systemName: !unreadNotifications.isEmpty ? "bell.badge.fill" : "bell")
+            if !unreadNotifications.isEmpty {
+                Text("\(unreadNotifications.count)")
                     .font(.caption2)
             }
         }
@@ -86,11 +94,17 @@ struct MenuBarContentView: View {
     @Bindable var store: StoreOf<AppFeature>
     @Environment(\.openWindow) private var openWindow
 
+    /// Reactive SwiftData query for menu bar
+    @Query(
+        filter: #Predicate<CachedNotification> { !$0.isArchived },
+        sort: [SortDescriptor(\CachedNotification.updatedAt, order: .reverse)]
+    ) private var notifications: [CachedNotification]
+
     var body: some View {
         VStack(spacing: 0) {
             if store.isAuthenticated {
                 // Quick notification list
-                if store.inbox.notifications.isEmpty {
+                if notifications.isEmpty {
                     ContentUnavailableView {
                         Label("No Notifications", systemImage: "tray")
                     } description: {
@@ -99,10 +113,10 @@ struct MenuBarContentView: View {
                     .frame(width: 300, height: 200)
                 } else {
                     List {
-                        ForEach(store.inbox.notifications.prefix(10)) { notification in
+                        ForEach(notifications.prefix(10), id: \.threadId) { notification in
                             NotificationMenuRowView(notification: notification)
                                 .onTapGesture {
-                                    store.send(.inbox(.notificationTapped(notification.id)))
+                                    store.send(.inbox(.notificationTapped(notification.threadId)))
                                 }
                         }
                     }
@@ -156,18 +170,18 @@ struct MenuBarContentView: View {
 // MARK: - Menu Bar Notification Row
 
 struct NotificationMenuRowView: View {
-    let notification: NotificationRowState
+    let notification: CachedNotification
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: notification.subjectType.systemImage)
-                .foregroundStyle(notification.isUnread ? .blue : .secondary)
+                .foregroundStyle(notification.unread ? .blue : .secondary)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(notification.title)
+                Text(notification.subjectTitle)
                     .font(.caption)
-                    .fontWeight(notification.isUnread ? .semibold : .regular)
+                    .fontWeight(notification.unread ? .semibold : .regular)
                     .lineLimit(1)
 
                 Text(notification.repositoryFullName)
@@ -177,7 +191,7 @@ struct NotificationMenuRowView: View {
 
             Spacer()
 
-            if notification.isUnread {
+            if notification.unread {
                 Circle()
                     .fill(.blue)
                     .frame(width: 8, height: 8)

@@ -10,14 +10,14 @@ public enum NotificationState: String, Codable, Sendable {
 
 @Model
 public final class ReadState {
-    // CloudKit doesn't support unique constraints - we handle uniqueness in app logic
+    /// CloudKit doesn't support unique constraints - we handle uniqueness in app logic
     public var threadId: String = ""
 
     public var stateRaw: String = NotificationState.unread.rawValue
     public var snoozeUntil: Date?
     public var accountId: String = ""
-    public var createdAt: Date = Date.now
-    public var updatedAt: Date = Date.now
+    public var createdAt = Date.now
+    public var updatedAt = Date.now
 
     public init(
         threadId: String,
@@ -28,7 +28,7 @@ public final class ReadState {
         updatedAt: Date = .now
     ) {
         self.threadId = threadId
-        self.stateRaw = state.rawValue
+        stateRaw = state.rawValue
         self.snoozeUntil = snoozeUntil
         self.accountId = accountId
         self.createdAt = createdAt

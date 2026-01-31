@@ -7,15 +7,17 @@ import SwiftUI
 public struct InboxFeature: Sendable {
     @ObservableState
     public struct State: Equatable {
-        public var notifications: IdentifiedArrayOf<NotificationRowState> = []
+        // UI state only - notifications are observed via @Query in views
         public var isLoading: Bool = false
         public var isRefreshing: Bool = false
         public var error: String?
         public var filter: Filter = .all
-        public var selectedRepository: String? = nil  // nil means all repos
+        public var selectedRepository: String? // nil means all repos
         public var groupByRepository: Bool = true
         public var selectedNotificationId: String?
-        public var lastUpdated: Date? = nil
+        public var lastUpdated: Date?
+        public var loadingProgress: String? // e.g., "Loading page 2..."
+        public var rateLimit: RateLimitInfo? // GitHub API rate limit status
 
         public enum Filter: String, CaseIterable, Sendable {
             case all = "All"
@@ -25,16 +27,15 @@ public struct InboxFeature: Sendable {
 
             public var systemImage: String {
                 switch self {
-                case .all: "tray.full"
-                case .unread: "envelope.badge"
-                case .participating: "bubble.left.and.bubble.right"
-                case .mentions: "at"
+                    case .all: "tray.full"
+                    case .unread: "envelope.badge"
+                    case .participating: "bubble.left.and.bubble.right"
+                    case .mentions: "at"
                 }
             }
         }
 
         public init(
-            notifications: IdentifiedArrayOf<NotificationRowState> = [],
             isLoading: Bool = false,
             isRefreshing: Bool = false,
             error: String? = nil,
@@ -42,9 +43,10 @@ public struct InboxFeature: Sendable {
             selectedRepository: String? = nil,
             groupByRepository: Bool = true,
             selectedNotificationId: String? = nil,
-            lastUpdated: Date? = nil
+            lastUpdated: Date? = nil,
+            loadingProgress: String? = nil,
+            rateLimit: RateLimitInfo? = nil
         ) {
-            self.notifications = notifications
             self.isLoading = isLoading
             self.isRefreshing = isRefreshing
             self.error = error
@@ -53,50 +55,8 @@ public struct InboxFeature: Sendable {
             self.groupByRepository = groupByRepository
             self.selectedNotificationId = selectedNotificationId
             self.lastUpdated = lastUpdated
-        }
-
-        /// List of unique repositories from notifications with their unread counts
-        public var repositories: [(name: String, unreadCount: Int)] {
-            let grouped = Dictionary(grouping: notifications.elements) { $0.repositoryFullName }
-            return grouped
-                .map { (name: $0.key, unreadCount: $0.value.filter(\.isUnread).count) }
-                .sorted { $0.name < $1.name }
-        }
-
-        public var filteredNotifications: IdentifiedArrayOf<NotificationRowState> {
-            var result = notifications
-
-            // Apply repository filter first
-            if let repo = selectedRepository {
-                result = result.filter { $0.repositoryFullName == repo }
-            }
-
-            // Then apply type filter
-            switch filter {
-            case .all:
-                return result
-            case .unread:
-                return result.filter(\.isUnread)
-            case .participating:
-                return result.filter { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }
-            case .mentions:
-                return result.filter { $0.reason == .mention }
-            }
-        }
-
-        public var groupedNotifications: [(String, IdentifiedArrayOf<NotificationRowState>)] {
-            guard groupByRepository else {
-                return [("All", filteredNotifications)]
-            }
-
-            let grouped = Dictionary(grouping: filteredNotifications.elements) { $0.repositoryFullName }
-            return grouped
-                .sorted { $0.key < $1.key }
-                .map { ($0.key, IdentifiedArrayOf(uniqueElements: $0.value)) }
-        }
-
-        public var unreadCount: Int {
-            notifications.filter(\.isUnread).count
+            self.loadingProgress = loadingProgress
+            self.rateLimit = rateLimit
         }
     }
 
@@ -104,17 +64,18 @@ public struct InboxFeature: Sendable {
         case startPolling
         case stopPolling
         case pollNow
-        case notificationsReceived([GitHubNotification])
+        case pageReceived(PollingPageResult)
+        case pollingCompleted
         case notificationsFailed(String)
         case filterChanged(State.Filter)
-        case repositorySelected(String?)  // nil clears filter
+        case repositorySelected(String?) // nil clears filter
         case toggleGroupByRepository
         case notificationTapped(String)
         case markAsRead(String)
         case markAsReadCompleted(String)
         case markAllAsRead
         case markAllAsReadCompleted
-        case archiveAll
+        case archiveAll([String]) // threadIds to archive
         case archive(String)
         case archiveCompleted(String)
         case snooze(String, Date)
@@ -126,172 +87,191 @@ public struct InboxFeature: Sendable {
     @Dependency(\.gitHubAPIClient) var gitHubAPIClient
     @Dependency(\.keychainService) var keychainService
     @Dependency(\.notificationPollingService) var pollingService
+    @Dependency(\.notificationPersistence) var persistence
 
     public init() {}
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .startPolling:
-                state.isLoading = true
-                return .run { send in
-                    for await notifications in pollingService.startPolling(60) {
-                        await send(.notificationsReceived(notifications))
+                case .startPolling:
+                    state.isLoading = true
+                    state.loadingProgress = "Loading..."
+                    return .run { send in
+                        for await page in pollingService.startPolling(60) {
+                            await send(.pageReceived(page))
+                        }
+                        await send(.pollingCompleted)
                     }
-                }
 
-            case .stopPolling:
-                pollingService.stopPolling()
-                return .none
+                case .stopPolling:
+                    pollingService.stopPolling()
+                    return .none
 
-            case .pollNow:
-                return .run { send in
-                    do {
-                        let notifications = try await pollingService.pollNow()
-                        await send(.notificationsReceived(notifications))
-                    } catch {
-                        await send(.notificationsFailed(error.localizedDescription))
+                case .pollNow:
+                    state.isRefreshing = true
+                    return .run { send in
+                        do {
+                            for try await page in pollingService.pollNow() {
+                                await send(.pageReceived(page))
+                            }
+                            await send(.pollingCompleted)
+                        } catch {
+                            await send(.notificationsFailed(error.localizedDescription))
+                        }
                     }
-                }
 
-            case let .notificationsReceived(notifications):
-                state.isLoading = false
-                state.isRefreshing = false
-                state.error = nil
-                state.lastUpdated = Date()
-
-                // Upsert notifications: update existing, insert new
-                // This preserves local state (snoozed, archived) for existing items
-                var seenIds = Set<String>()
-
-                for notification in notifications {
-                    // Skip duplicates within this batch
-                    guard seenIds.insert(notification.id).inserted else { continue }
-
-                    let newRowState = NotificationRowState(
-                        id: notification.id,
-                        threadId: notification.id,
-                        title: notification.subject.title,
-                        repositoryFullName: notification.repository.fullName,
-                        repositoryOwner: notification.repository.owner.login,
-                        repositoryAvatarURL: notification.repository.owner.avatarUrl.flatMap { URL(string: $0) },
-                        subjectType: NotificationSubjectType(from: notification.subject.type),
-                        reason: NotificationReason(rawValue: notification.reason) ?? .subscribed,
-                        isUnread: notification.unread,
-                        updatedAt: ISO8601DateFormatter().date(from: notification.updatedAt) ?? .now,
-                        webURL: notification.subject.url.flatMap { URL(string: $0) }
-                    )
-
-                    if let existingIndex = state.notifications.index(id: notification.id) {
-                        // Update existing: preserve local state (snoozed, archived)
-                        var updated = newRowState
-                        updated.isSnoozed = state.notifications[existingIndex].isSnoozed
-                        updated.snoozeUntil = state.notifications[existingIndex].snoozeUntil
-                        state.notifications[existingIndex] = updated
+                case let .pageReceived(page):
+                    // Update loading state
+                    if page.isFirstPage {
+                        state.isLoading = false
+                        state.loadingProgress = page.hasMorePages ? "Loading more..." : nil
                     } else {
-                        // Insert new
-                        state.notifications.append(newRowState)
+                        state.loadingProgress = page.hasMorePages ? "Loading more..." : nil
                     }
-                }
-                return .none
 
-            case let .notificationsFailed(error):
-                state.isLoading = false
-                state.isRefreshing = false
-                state.error = error
-                return .none
+                    state.error = nil
+                    state.lastUpdated = Date()
 
-            case let .filterChanged(filter):
-                state.filter = filter
-                return .none
+                    // Update rate limit info
+                    if let rateLimit = page.rateLimit {
+                        state.rateLimit = rateLimit
+                    }
 
-            case let .repositorySelected(repo):
-                state.selectedRepository = repo
-                return .none
-
-            case .toggleGroupByRepository:
-                state.groupByRepository.toggle()
-                return .none
-
-            case let .notificationTapped(id):
-                state.selectedNotificationId = id
-                return .none
-
-            case let .markAsRead(threadId):
-                return .run { send in
-                    do {
-                        guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
-                            return
+                    // Save this page to SwiftData immediately - views update reactively
+                    return .run { [persistence] _ in
+                        if !page.notifications.isEmpty {
+                            try await persistence.upsertFromAPI(page.notifications, "default")
                         }
-                        try await gitHubAPIClient.markAsRead(token, threadId)
-                        await send(.markAsReadCompleted(threadId))
-                    } catch {
-                        // Handle error silently for now
                     }
-                }
 
-            case let .markAsReadCompleted(threadId):
-                if let index = state.notifications.firstIndex(where: { $0.id == threadId }) {
-                    state.notifications[index].isUnread = false
-                }
-                return .none
+                case .pollingCompleted:
+                    state.isLoading = false
+                    state.isRefreshing = false
+                    state.loadingProgress = nil
+                    return .none
 
-            case .markAllAsRead:
-                return .run { send in
-                    do {
-                        guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
-                            return
+                case let .notificationsFailed(error):
+                    state.isLoading = false
+                    state.isRefreshing = false
+                    state.loadingProgress = nil
+                    state.error = error
+                    return .none
+
+                case let .filterChanged(filter):
+                    state.filter = filter
+                    return .none
+
+                case let .repositorySelected(repo):
+                    state.selectedRepository = repo
+                    return .none
+
+                case .toggleGroupByRepository:
+                    state.groupByRepository.toggle()
+                    return .none
+
+                case let .notificationTapped(id):
+                    state.selectedNotificationId = id
+                    return .none
+
+                case let .markAsRead(threadId):
+                    return .run { [persistence, keychainService, gitHubAPIClient] send in
+                        // Update locally first for immediate feedback
+                        try await persistence.markAsRead(threadId)
+
+                        // Then sync with GitHub
+                        do {
+                            guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
+                                return
+                            }
+                            try await gitHubAPIClient.markAsRead(token, threadId)
+                            await send(.markAsReadCompleted(threadId))
+                        } catch {
+                            // API error - local state already updated
                         }
-                        try await gitHubAPIClient.markAllAsRead(token, nil)
-                        await send(.markAllAsReadCompleted)
-                    } catch {
-                        // Handle error silently for now
                     }
-                }
 
-            case .markAllAsReadCompleted:
-                for index in state.notifications.indices {
-                    state.notifications[index].isUnread = false
-                }
-                return .none
+                case .markAsReadCompleted:
+                    // Already updated in SwiftData, views update automatically
+                    return .none
 
-            case .archiveAll:
-                // Archive all currently filtered notifications
-                let idsToArchive = state.filteredNotifications.map(\.id)
-                return .run { send in
-                    for id in idsToArchive {
-                        await send(.archive(id))
+                case .markAllAsRead:
+                    return .run { [persistence, keychainService, gitHubAPIClient] send in
+                        // Update locally first
+                        try await persistence.markAllAsRead("default")
+
+                        // Then sync with GitHub
+                        do {
+                            guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
+                                return
+                            }
+                            try await gitHubAPIClient.markAllAsRead(token, nil)
+                            await send(.markAllAsReadCompleted)
+                        } catch {
+                            // API error - local state already updated
+                        }
                     }
-                }
 
-            case let .archive(threadId):
-                return .send(.markAsRead(threadId))
+                case .markAllAsReadCompleted:
+                    // Already updated in SwiftData
+                    return .none
 
-            case let .archiveCompleted(threadId):
-                state.notifications.remove(id: threadId)
-                return .none
+                case let .archiveAll(threadIds):
+                    return .run { [persistence, keychainService, gitHubAPIClient] send in
+                        for threadId in threadIds {
+                            try await persistence.archive(threadId)
 
-            case let .snooze(threadId, until):
-                // Store snooze state locally
-                if let index = state.notifications.firstIndex(where: { $0.id == threadId }) {
-                    state.notifications[index].isSnoozed = true
-                    state.notifications[index].snoozeUntil = until
-                }
-                return .send(.snoozeCompleted(threadId))
+                            // Also mark as read on GitHub
+                            do {
+                                guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
+                                    continue
+                                }
+                                try await gitHubAPIClient.markAsRead(token, threadId)
+                            } catch {
+                                // Continue archiving even if GitHub sync fails
+                            }
 
-            case .snoozeCompleted:
-                return .none
+                            await send(.archiveCompleted(threadId))
+                        }
+                    }
 
-            case .refresh:
-                state.isRefreshing = true
-                return .send(.pollNow)
+                case let .archive(threadId):
+                    return .run { [persistence, keychainService, gitHubAPIClient] send in
+                        try await persistence.archive(threadId)
 
-            case .refreshCompleted:
-                state.isRefreshing = false
-                return .none
+                        // Also mark as read on GitHub
+                        do {
+                            guard let token = try keychainService.loadToken(forKey: "github_oauth_token_default") else {
+                                return
+                            }
+                            try await gitHubAPIClient.markAsRead(token, threadId)
+                        } catch {
+                            // Continue even if GitHub sync fails
+                        }
+
+                        await send(.archiveCompleted(threadId))
+                    }
+
+                case .archiveCompleted:
+                    // Already updated in SwiftData
+                    return .none
+
+                case let .snooze(threadId, until):
+                    return .run { [persistence] send in
+                        try await persistence.snooze(threadId, until)
+                        await send(.snoozeCompleted(threadId))
+                    }
+
+                case .snoozeCompleted:
+                    return .none
+
+                case .refresh:
+                    return .send(.pollNow)
+
+                case .refreshCompleted:
+                    state.isRefreshing = false
+                    return .none
             }
         }
     }
 }
-
-// NotificationRowState is now defined in HubWorksCore

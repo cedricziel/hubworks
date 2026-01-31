@@ -67,25 +67,6 @@ public struct GitHubUser: Codable, Equatable, Sendable {
     }
 }
 
-public struct NotificationFetchResult: Equatable, Sendable {
-    public let notifications: [GitHubNotification]
-    public let lastModified: String?
-    public let pollInterval: Int?
-    public let wasModified: Bool
-
-    public init(
-        notifications: [GitHubNotification],
-        lastModified: String?,
-        pollInterval: Int?,
-        wasModified: Bool
-    ) {
-        self.notifications = notifications
-        self.lastModified = lastModified
-        self.pollInterval = pollInterval
-        self.wasModified = wasModified
-    }
-}
-
 public enum GitHubAPIError: Error, Equatable, Sendable {
     case invalidURL
     case unauthorized
@@ -96,14 +77,74 @@ public enum GitHubAPIError: Error, Equatable, Sendable {
     case serverError(Int, String)
 }
 
+/// Rate limit information from GitHub API
+public struct RateLimitInfo: Equatable, Sendable {
+    public let limit: Int // Total requests allowed per hour
+    public let remaining: Int // Requests remaining
+    public let reset: Date // When the limit resets
+    public let used: Int // Requests used this hour
+
+    public init(limit: Int, remaining: Int, reset: Date, used: Int) {
+        self.limit = limit
+        self.remaining = remaining
+        self.reset = reset
+        self.used = used
+    }
+
+    /// Percentage of rate limit remaining (0.0 to 1.0)
+    public var percentRemaining: Double {
+        guard limit > 0 else { return 1.0 }
+        return Double(remaining) / Double(limit)
+    }
+
+    /// Time until rate limit resets
+    public var timeUntilReset: TimeInterval {
+        reset.timeIntervalSinceNow
+    }
+
+    /// Whether we're running low on requests (< 10%)
+    public var isLow: Bool {
+        percentRemaining < 0.1
+    }
+}
+
+/// Result for a single page of notifications
+public struct NotificationPageResult: Equatable, Sendable {
+    public let notifications: [GitHubNotification]
+    public let lastModified: String?
+    public let pollInterval: Int?
+    public let hasMorePages: Bool
+    public let isFirstPage: Bool
+    public let rateLimit: RateLimitInfo?
+
+    public init(
+        notifications: [GitHubNotification],
+        lastModified: String?,
+        pollInterval: Int?,
+        hasMorePages: Bool,
+        isFirstPage: Bool,
+        rateLimit: RateLimitInfo? = nil
+    ) {
+        self.notifications = notifications
+        self.lastModified = lastModified
+        self.pollInterval = pollInterval
+        self.hasMorePages = hasMorePages
+        self.isFirstPage = isFirstPage
+        self.rateLimit = rateLimit
+    }
+}
+
 @DependencyClient
 public struct GitHubAPIClient: Sendable {
-    public var fetchNotifications: @Sendable (
+    /// Stream notifications page by page for progressive loading
+    public var fetchNotificationsStream: @Sendable (
         _ token: String,
         _ lastModified: String?,
         _ all: Bool,
         _ participating: Bool
-    ) async throws -> NotificationFetchResult
+    ) -> AsyncThrowingStream<NotificationPageResult, Error> = { _, _, _, _ in
+        AsyncThrowingStream { $0.finish() }
+    }
 
     public var markAsRead: @Sendable (_ token: String, _ threadId: String) async throws -> Void
     public var markAllAsRead: @Sendable (_ token: String, _ lastReadAt: Date?) async throws -> Void
@@ -156,108 +197,159 @@ extension GitHubAPIClient: DependencyKey {
             return nil
         }
 
+        /// Parses rate limit headers from GitHub API response
+        @Sendable
+        func parseRateLimit(from response: HTTPURLResponse) -> RateLimitInfo? {
+            guard
+                let limitStr = response.value(forHTTPHeaderField: "X-RateLimit-Limit"),
+                let limit = Int(limitStr),
+                let remainingStr = response.value(forHTTPHeaderField: "X-RateLimit-Remaining"),
+                let remaining = Int(remainingStr),
+                let resetStr = response.value(forHTTPHeaderField: "X-RateLimit-Reset"),
+                let resetTimestamp = TimeInterval(resetStr),
+                let usedStr = response.value(forHTTPHeaderField: "X-RateLimit-Used"),
+                let used = Int(usedStr)
+            else {
+                return nil
+            }
+
+            return RateLimitInfo(
+                limit: limit,
+                remaining: remaining,
+                reset: Date(timeIntervalSince1970: resetTimestamp),
+                used: used
+            )
+        }
+
         return GitHubAPIClient(
-            fetchNotifications: { token, lastModified, all, participating in
-                var allNotifications: [GitHubNotification] = []
-                var currentLastModified: String? = nil
-                var pollInterval: Int? = nil
+            fetchNotificationsStream: { token, lastModified, all, participating in
+                AsyncThrowingStream { continuation in
+                    Task {
+                        var currentLastModified: String?
+                        var pollInterval: Int?
 
-                // Build initial URL with per_page=100 (GitHub's maximum)
-                var queryItems: [URLQueryItem] = [
-                    URLQueryItem(name: "per_page", value: "100")
-                ]
+                        // Build initial URL with per_page=100 (GitHub's maximum)
+                        var queryItems: [URLQueryItem] = [
+                            URLQueryItem(name: "per_page", value: "100"),
+                        ]
 
-                if all {
-                    queryItems.append(URLQueryItem(name: "all", value: "true"))
-                }
-                if participating {
-                    queryItems.append(URLQueryItem(name: "participating", value: "true"))
-                }
-
-                var urlComponents = URLComponents(url: baseURL.appendingPathComponent("/notifications"), resolvingAgainstBaseURL: false)!
-                urlComponents.queryItems = queryItems
-
-                guard var currentURL = urlComponents.url else {
-                    throw GitHubAPIError.invalidURL
-                }
-
-                // Paginate through all results until no more pages
-                var isFirstPage = true
-
-                while true {
-
-                    var request = URLRequest(url: currentURL)
-                    request.httpMethod = "GET"
-                    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-                    request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-
-                    // Only use If-Modified-Since on first request
-                    if isFirstPage, let lastModified {
-                        request.setValue(lastModified, forHTTPHeaderField: "If-Modified-Since")
-                    }
-
-                    let (data, response) = try await URLSession.shared.data(for: request)
-
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw GitHubAPIError.networkError("Invalid response type")
-                    }
-
-                    // Capture headers from first response
-                    if isFirstPage {
-                        currentLastModified = httpResponse.value(forHTTPHeaderField: "Last-Modified")
-                        let pollIntervalString = httpResponse.value(forHTTPHeaderField: "X-Poll-Interval")
-                        pollInterval = pollIntervalString.flatMap { Int($0) }
-                        isFirstPage = false
-                    }
-
-                    switch httpResponse.statusCode {
-                    case 200:
-                        let decoder = JSONDecoder()
-                        decoder.dateDecodingStrategy = .iso8601
-                        let notifications = try decoder.decode([GitHubNotification].self, from: data)
-                        allNotifications.append(contentsOf: notifications)
-
-                        // Check for next page
-                        let linkHeader = httpResponse.value(forHTTPHeaderField: "Link")
-                        if let nextURL = parseNextPageURL(from: linkHeader) {
-                            currentURL = nextURL
-                        } else {
-                            // No more pages
-                            break
+                        if all {
+                            queryItems.append(URLQueryItem(name: "all", value: "true"))
+                        }
+                        if participating {
+                            queryItems.append(URLQueryItem(name: "participating", value: "true"))
                         }
 
-                    case 304:
-                        // Not modified - return empty with preserved lastModified
-                        return NotificationFetchResult(
-                            notifications: [],
-                            lastModified: currentLastModified ?? lastModified,
-                            pollInterval: pollInterval,
-                            wasModified: false
-                        )
+                        var urlComponents = URLComponents(
+                            url: baseURL.appendingPathComponent("/notifications"),
+                            resolvingAgainstBaseURL: false
+                        )!
+                        urlComponents.queryItems = queryItems
 
-                    case 401:
-                        throw GitHubAPIError.unauthorized
+                        guard var currentURL = urlComponents.url else {
+                            continuation.finish(throwing: GitHubAPIError.invalidURL)
+                            return
+                        }
 
-                    case 403:
-                        let resetHeader = httpResponse.value(forHTTPHeaderField: "X-RateLimit-Reset")
-                        let resetDate = resetHeader
-                            .flatMap { TimeInterval($0) }
-                            .map { Date(timeIntervalSince1970: $0) }
-                        throw GitHubAPIError.rateLimited(resetAt: resetDate)
+                        var isFirstPage = true
 
-                    default:
-                        let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-                        throw GitHubAPIError.serverError(httpResponse.statusCode, message)
+                        while true {
+                            var request = URLRequest(url: currentURL)
+                            request.httpMethod = "GET"
+                            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+                            request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+
+                            // Only use If-Modified-Since on first request
+                            if isFirstPage, let lastModified {
+                                request.setValue(lastModified, forHTTPHeaderField: "If-Modified-Since")
+                            }
+
+                            do {
+                                let (data, response) = try await URLSession.shared.data(for: request)
+
+                                guard let httpResponse = response as? HTTPURLResponse else {
+                                    continuation.finish(throwing: GitHubAPIError.networkError("Invalid response type"))
+                                    return
+                                }
+
+                                // Capture headers from first response
+                                if isFirstPage {
+                                    currentLastModified = httpResponse.value(forHTTPHeaderField: "Last-Modified")
+                                    let pollIntervalString = httpResponse.value(forHTTPHeaderField: "X-Poll-Interval")
+                                    pollInterval = pollIntervalString.flatMap { Int($0) }
+                                }
+
+                                // Parse rate limit from every response
+                                let rateLimit = parseRateLimit(from: httpResponse)
+
+                                switch httpResponse.statusCode {
+                                    case 200:
+                                        let decoder = JSONDecoder()
+                                        decoder.dateDecodingStrategy = .iso8601
+                                        let notifications = try decoder.decode([GitHubNotification].self, from: data)
+
+                                        // Check for next page
+                                        let linkHeader = httpResponse.value(forHTTPHeaderField: "Link")
+                                        let hasMorePages = parseNextPageURL(from: linkHeader) != nil
+
+                                        // Yield this page immediately
+                                        continuation.yield(NotificationPageResult(
+                                            notifications: notifications,
+                                            lastModified: currentLastModified,
+                                            pollInterval: pollInterval,
+                                            hasMorePages: hasMorePages,
+                                            isFirstPage: isFirstPage,
+                                            rateLimit: rateLimit
+                                        ))
+
+                                        isFirstPage = false
+
+                                        if let nextURL = parseNextPageURL(from: linkHeader) {
+                                            currentURL = nextURL
+                                        } else {
+                                            // No more pages - finish successfully
+                                            continuation.finish()
+                                            return
+                                        }
+
+                                    case 304:
+                                        // Not modified - yield empty result and finish
+                                        continuation.yield(NotificationPageResult(
+                                            notifications: [],
+                                            lastModified: currentLastModified ?? lastModified,
+                                            pollInterval: pollInterval,
+                                            hasMorePages: false,
+                                            isFirstPage: true,
+                                            rateLimit: rateLimit
+                                        ))
+                                        continuation.finish()
+                                        return
+
+                                    case 401:
+                                        continuation.finish(throwing: GitHubAPIError.unauthorized)
+                                        return
+
+                                    case 403:
+                                        let resetHeader = httpResponse.value(forHTTPHeaderField: "X-RateLimit-Reset")
+                                        let resetDate = resetHeader
+                                            .flatMap { TimeInterval($0) }
+                                            .map { Date(timeIntervalSince1970: $0) }
+                                        continuation.finish(throwing: GitHubAPIError.rateLimited(resetAt: resetDate))
+                                        return
+
+                                    default:
+                                        let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+                                        continuation.finish(throwing: GitHubAPIError.serverError(httpResponse.statusCode, message))
+                                        return
+                                }
+                            } catch {
+                                continuation.finish(throwing: error)
+                                return
+                            }
+                        }
                     }
                 }
-
-                return NotificationFetchResult(
-                    notifications: allNotifications,
-                    lastModified: currentLastModified,
-                    pollInterval: pollInterval,
-                    wasModified: true
-                )
             },
 
             markAsRead: { token, threadId in
@@ -273,7 +365,7 @@ extension GitHubAPIClient: DependencyKey {
                     throw GitHubAPIError.networkError("Invalid response type")
                 }
 
-                guard (200 ... 299).contains(httpResponse.statusCode) else {
+                guard (200...299).contains(httpResponse.statusCode) else {
                     throw GitHubAPIError.serverError(httpResponse.statusCode, "Failed to mark as read")
                 }
             },
@@ -298,7 +390,7 @@ extension GitHubAPIClient: DependencyKey {
                     throw GitHubAPIError.networkError("Invalid response type")
                 }
 
-                guard (200 ... 299).contains(httpResponse.statusCode) else {
+                guard (200...299).contains(httpResponse.statusCode) else {
                     throw GitHubAPIError.serverError(httpResponse.statusCode, "Failed to mark all as read")
                 }
             },
@@ -313,13 +405,13 @@ extension GitHubAPIClient: DependencyKey {
                 }
 
                 switch httpResponse.statusCode {
-                case 200:
-                    return try JSONDecoder().decode(GitHubUser.self, from: data)
-                case 401:
-                    throw GitHubAPIError.unauthorized
-                default:
-                    let message = String(data: data, encoding: .utf8) ?? "Unknown error"
-                    throw GitHubAPIError.serverError(httpResponse.statusCode, message)
+                    case 200:
+                        return try JSONDecoder().decode(GitHubUser.self, from: data)
+                    case 401:
+                        throw GitHubAPIError.unauthorized
+                    default:
+                        let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+                        throw GitHubAPIError.serverError(httpResponse.statusCode, message)
                 }
             },
 
@@ -336,7 +428,7 @@ extension GitHubAPIClient: DependencyKey {
                     throw GitHubAPIError.networkError("Invalid response type")
                 }
 
-                guard (200 ... 299).contains(httpResponse.statusCode) else {
+                guard (200...299).contains(httpResponse.statusCode) else {
                     throw GitHubAPIError.serverError(httpResponse.statusCode, "Failed to unsubscribe")
                 }
             }
