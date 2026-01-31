@@ -45,6 +45,8 @@
 	<string>public.app-category.developer-tools</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>HubWorks uses Face ID to protect your GitHub accounts</string>
+	<key>NSSupportsLiveFocusFilters</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

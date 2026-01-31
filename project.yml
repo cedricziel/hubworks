@@ -117,6 +117,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers:
           - com.cedricziel.hubworks.refresh
         NSFaceIDUsageDescription: HubWorks uses Face ID to protect your GitHub accounts
+        NSSupportsLiveFocusFilters: true
         GitHubClientID: $(GITHUB_CLIENT_ID)
         GitHubClientSecret: $(GITHUB_CLIENT_SECRET)
         CFBundleURLTypes:
@@ -190,6 +191,9 @@ targets:
             CFBundleURLName: com.cedricziel.hubworks.oauth
         LSApplicationCategoryType: public.app-category.developer-tools
         ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveFocusFilters: true
+
+  # MARK: - watchOS App
   HubWorks-watchOS:
     type: application
     platform: watchOS
