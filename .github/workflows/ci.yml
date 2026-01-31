@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build & Test
+  build-ios:
+    name: Build iOS
     runs-on: macos-26
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -39,6 +39,24 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
+  build-macos:
+    name: Build macOS
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+          make generate
+
       - name: Build macOS
         run: |
           xcodebuild build \
@@ -48,6 +66,24 @@ jobs:
             -configuration Debug \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
+
+  test:
+    name: Run Tests
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+          make generate
 
       - name: Run Tests
         run: |
