@@ -10,6 +10,7 @@ private enum SidebarSelection: Hashable {
     case repository(String)
 }
 
+// swiftlint:disable:next type_body_length
 public struct InboxView: View {
     @Bindable var store: StoreOf<InboxFeature>
 
@@ -19,16 +20,34 @@ public struct InboxView: View {
         sort: [SortDescriptor(\CachedNotification.updatedAt, order: .reverse)]
     ) private var notifications: [CachedNotification]
 
+    @Query private var scopes: [NotificationScope]
+    @Environment(\.modelContext) private var modelContext
+
     public init(store: StoreOf<InboxFeature>) {
         self.store = store
     }
 
     // MARK: - Computed Properties from SwiftData
 
+    private var activeScope: NotificationScope? {
+        guard let activeScopeId = store.activeFocusScopeId else { return nil }
+        return scopes.first { $0.id == activeScopeId }
+    }
+
     private var filteredNotifications: [CachedNotification] {
         var result = notifications
 
-        // Apply repository filter first
+        // Apply scope filtering first if Focus Filter is active and not temporarily disabled
+        if let scope = activeScope,
+           !store.isFocusFilterTemporarilyDisabled,
+           !scope.isDefault
+        {
+            result = result.filter { notification in
+                scope.matchesNotification(notification)
+            }
+        }
+
+        // Apply repository filter
         if let repo = store.selectedRepository {
             result = result.filter { $0.repositoryFullName == repo }
         }
@@ -81,13 +100,29 @@ public struct InboxView: View {
     #if os(iOS)
     private var iOSLayout: some View {
         NavigationStack {
-            Group {
-                if store.isLoading, notifications.isEmpty {
-                    ProgressView("Loading notifications...")
-                } else if notifications.isEmpty {
-                    emptyState
-                } else {
-                    notificationList
+            VStack(spacing: 0) {
+                // Show Focus Filter banner when active
+                if let scope = activeScope,
+                   !scope.isDefault
+                {
+                    FocusFilterBannerView(
+                        scopeName: scope.name,
+                        scopeEmoji: scope.emoji,
+                        isEnabled: !store.isFocusFilterTemporarilyDisabled
+                    ) {
+                        store.send(.toggleFocusFilter)
+                    }
+                }
+
+                // Main content
+                Group {
+                    if store.isLoading, notifications.isEmpty {
+                        ProgressView("Loading notifications...")
+                    } else if notifications.isEmpty {
+                        emptyState
+                    } else {
+                        notificationList
+                    }
                 }
             }
             .navigationTitle("Inbox")
@@ -97,6 +132,9 @@ public struct InboxView: View {
             .refreshable {
                 await refreshNotifications()
             }
+        }
+        .onAppear {
+            store.send(.checkActiveFocusScope)
         }
     }
 
@@ -135,6 +173,19 @@ public struct InboxView: View {
                 .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
         } detail: {
             VStack(spacing: 0) {
+                // Show Focus Filter banner when active
+                if let scope = activeScope,
+                   !scope.isDefault
+                {
+                    FocusFilterBannerView(
+                        scopeName: scope.name,
+                        scopeEmoji: scope.emoji,
+                        isEnabled: !store.isFocusFilterTemporarilyDisabled
+                    ) {
+                        store.send(.toggleFocusFilter)
+                    }
+                }
+
                 // Main content
                 Group {
                     if store.isLoading, notifications.isEmpty {
@@ -156,6 +207,9 @@ public struct InboxView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .onAppear {
+            store.send(.checkActiveFocusScope)
+        }
     }
 
     private var navigationTitle: String {
