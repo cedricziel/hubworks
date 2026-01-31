@@ -212,6 +212,7 @@ private struct NotificationsTab: View {
 
 private struct DisplayTab: View {
     @Bindable var store: StoreOf<SettingsFeature>
+    @AppStorage("menubar_notification_limit") private var menubarNotificationLimit = 10
 
     var body: some View {
         Form {
@@ -224,6 +225,23 @@ private struct DisplayTab: View {
                 Text("Organization")
             } footer: {
                 Text("When enabled, notifications are grouped by their repository. Otherwise, they appear in chronological order.")
+            }
+
+            Section {
+                Picker("Maximum Notifications", selection: $menubarNotificationLimit) {
+                    Text("10 notifications").tag(10)
+                    Text("20 notifications").tag(20)
+                    Text("50 notifications").tag(50)
+                    Text("Show All").tag(999)
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Menu Bar")
+            } footer: {
+                Text("""
+                The maximum number of notifications to display in the menu bar dropdown. \
+                Choose "Show All" to display all matching notifications.
+                """)
             }
         }
         .formStyle(.grouped)

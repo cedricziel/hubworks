@@ -94,26 +94,40 @@ struct MenuBarContentView: View {
     @Bindable var store: StoreOf<AppFeature>
     @Environment(\.openWindow) private var openWindow
 
+    @AppStorage("menubar_show_all_notifications") private var showAllNotifications = false
+    @AppStorage("menubar_notification_limit") private var notificationLimit = 10
+
     /// Reactive SwiftData query for menu bar
     @Query(
         filter: #Predicate<CachedNotification> { !$0.isArchived },
         sort: [SortDescriptor(\CachedNotification.updatedAt, order: .reverse)]
     ) private var notifications: [CachedNotification]
 
+    private var displayedNotifications: [CachedNotification] {
+        let filtered = showAllNotifications
+            ? notifications
+            : notifications.filter(\.unread)
+
+        // Apply limit (999 = show all)
+        return notificationLimit >= 999
+            ? Array(filtered)
+            : Array(filtered.prefix(notificationLimit))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if store.isAuthenticated {
                 // Quick notification list
-                if notifications.isEmpty {
+                if displayedNotifications.isEmpty {
                     ContentUnavailableView {
                         Label("No Notifications", systemImage: "tray")
                     } description: {
-                        Text("You're all caught up!")
+                        Text(showAllNotifications ? "You're all caught up!" : "No unread notifications")
                     }
                     .frame(width: 300, height: 200)
                 } else {
                     List {
-                        ForEach(notifications.prefix(10), id: \.threadId) { notification in
+                        ForEach(displayedNotifications, id: \.threadId) { notification in
                             NotificationMenuRowView(notification: notification)
                                 .onTapGesture {
                                     store.send(.inbox(.notificationTapped(notification.threadId)))
@@ -122,6 +136,20 @@ struct MenuBarContentView: View {
                     }
                     .listStyle(.plain)
                     .frame(width: 350, height: 400)
+
+                    Divider()
+                        .padding(.vertical, 4)
+
+                    Toggle(isOn: $showAllNotifications) {
+                        Label(
+                            showAllNotifications ? "Showing All" : "Showing Unread",
+                            systemImage: showAllNotifications ? "tray.fill" : "tray"
+                        )
+                    }
+                    .toggleStyle(.button)
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                 }
             } else {
                 VStack(spacing: 16) {
