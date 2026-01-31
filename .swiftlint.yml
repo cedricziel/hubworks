@@ -1,8 +1,10 @@
+---
 disabled_rules:
   - trailing_comma
   - todo
   - opening_brace
   - vertical_whitespace_opening_braces
+  - switch_case_alignment
 
 opt_in_rules:
   - closure_end_indentation
@@ -98,6 +100,9 @@ identifier_name:
     - y
     - i
     - j
+    - r
+    - g
+    - b
 
 nesting:
   type_level: 3

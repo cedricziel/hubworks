@@ -9,8 +9,12 @@ public struct UnreadBadgeView: View {
         self.maxDisplayCount = maxDisplayCount
     }
 
+    private var hasUnread: Bool {
+        count >= 1
+    }
+
     public var body: some View {
-        if count > 0 {
+        if hasUnread {
             Text(displayText)
                 .font(.caption2)
                 .fontWeight(.semibold)
