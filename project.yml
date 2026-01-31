@@ -93,7 +93,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "1.0.0"
+        MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
     info:
       path: Apps/HubWorks-iOS/Info.plist
@@ -130,6 +130,7 @@ targets:
               - hubworks
             CFBundleURLName: com.cedricziel.hubworks.oauth
         LSApplicationCategoryType: public.app-category.developer-tools
+        ITSAppUsesNonExemptEncryption: false
 
   # MARK: - macOS App
   HubWorks-macOS:
@@ -173,7 +174,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "1.0.0"
+        MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
@@ -196,6 +197,7 @@ targets:
               - hubworks
             CFBundleURLName: com.cedricziel.hubworks.oauth
         LSApplicationCategoryType: public.app-category.developer-tools
+        ITSAppUsesNonExemptEncryption: false
 
   # MARK: - watchOS App
   HubWorks-watchOS:
@@ -227,7 +229,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "1.0.0"
+        MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
     info:
       path: Apps/HubWorks-watchOS/Info.plist
@@ -240,6 +242,7 @@ targets:
         CFBundlePackageType: APPL
         CFBundleExecutable: $(EXECUTABLE_NAME)
         WKApplication: true
+        ITSAppUsesNonExemptEncryption: false
 
   # MARK: - iOS Frameworks
   HubWorksCore_iOS:
