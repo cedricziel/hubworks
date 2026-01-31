@@ -1,4 +1,4 @@
-.PHONY: all generate build test lint format clean
+.PHONY: all generate build test lint format clean install-hooks
 
 # Default target
 all: generate
@@ -49,5 +49,10 @@ resolve:
 open:
 	open HubWorks.xcodeproj
 
-# Full setup (generate + resolve dependencies)
-setup: generate resolve
+# Install git hooks
+install-hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks installed from .githooks/"
+
+# Full setup (generate + resolve dependencies + hooks)
+setup: generate resolve install-hooks

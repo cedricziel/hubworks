@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+echo "Running pre-commit hooks..."
+
+# Get the list of staged Swift files
+STAGED_SWIFT_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$' || true)
+
+if [ -z "$STAGED_SWIFT_FILES" ]; then
+    echo "No Swift files staged, skipping format and lint."
+    exit 0
+fi
+
+echo "Formatting staged Swift files..."
+echo "$STAGED_SWIFT_FILES" | xargs swiftformat --config .swiftformat
+
+# Re-add formatted files to staging
+echo "$STAGED_SWIFT_FILES" | xargs git add
+
+echo "Linting staged Swift files..."
+echo "$STAGED_SWIFT_FILES" | xargs swiftlint lint --config .swiftlint.yml --strict
+
+echo "Pre-commit checks passed!"
