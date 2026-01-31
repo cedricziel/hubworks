@@ -15,6 +15,7 @@ public struct SettingsFeature: Sendable {
         public var groupByRepository: Bool = true
         public var appVersion: String = "1.0.0"
         public var buildNumber: String = "1"
+        public var focusScopes: FocusScopeFeature.State = .init()
 
         public struct AccountState: Equatable, Identifiable, Sendable {
             public let id: String
@@ -44,7 +45,8 @@ public struct SettingsFeature: Sendable {
             showUnreadBadge: Bool = true,
             groupByRepository: Bool = true,
             appVersion: String = "1.0.0",
-            buildNumber: String = "1"
+            buildNumber: String = "1",
+            focusScopes: FocusScopeFeature.State = .init()
         ) {
             self.accounts = accounts
             self.isLoadingUser = isLoadingUser
@@ -55,6 +57,7 @@ public struct SettingsFeature: Sendable {
             self.groupByRepository = groupByRepository
             self.appVersion = appVersion
             self.buildNumber = buildNumber
+            self.focusScopes = focusScopes
         }
     }
 
@@ -73,6 +76,7 @@ public struct SettingsFeature: Sendable {
         case groupByRepositoryChanged(Bool)
         case signOutTapped
         case signOutCompleted
+        case focusScopes(FocusScopeFeature.Action)
     }
 
     @Dependency(\.keychainService) var keychainService
@@ -83,6 +87,10 @@ public struct SettingsFeature: Sendable {
 
     // swiftformat:disable indent
     public var body: some ReducerOf<Self> {
+        Scope(state: \.focusScopes, action: \.focusScopes) {
+            FocusScopeFeature()
+        }
+
         Reduce { state, action in
             switch action {
             case .onAppear:
@@ -170,6 +178,9 @@ public struct SettingsFeature: Sendable {
 
             case .signOutCompleted:
                 state.accounts = []
+                return .none
+
+            case .focusScopes:
                 return .none
             }
         }

@@ -82,10 +82,58 @@ public struct ScopeEditorFeature: Sendable {
         }
     }
 
+    public struct ScopeData: Sendable, Equatable {
+        let id: String
+        let name: String
+        let emoji: String
+        let colorHex: String
+        let organizations: [String]
+        let repositories: [String]
+        let quietHoursEnabled: Bool
+        let quietHoursStart: Int
+        let quietHoursEnd: Int
+        let quietHoursDays: [Int]
+        let isDefault: Bool
+
+        init(from scope: NotificationScope) {
+            id = scope.id
+            name = scope.name
+            emoji = scope.emoji
+            colorHex = scope.colorHex
+            quietHoursEnabled = scope.quietHoursEnabled
+            quietHoursStart = scope.quietHoursStart
+            quietHoursEnd = scope.quietHoursEnd
+            quietHoursDays = scope.quietHoursDays
+            isDefault = scope.isDefault
+
+            if let rules = scope.rules {
+                organizations = rules.compactMap(\.organizationPattern).filter { !$0.isEmpty }
+                repositories = rules.compactMap(\.repositoryPattern).filter { !$0.isEmpty }
+            } else {
+                organizations = []
+                repositories = []
+            }
+        }
+
+        init(from state: ScopeEditorFeature.State) {
+            id = state.scopeId ?? UUID().uuidString
+            name = state.name
+            emoji = state.emoji
+            colorHex = state.colorHex
+            organizations = state.selectedOrganizations
+            repositories = state.selectedRepositories
+            quietHoursEnabled = state.quietHoursEnabled
+            quietHoursStart = state.quietHoursStart
+            quietHoursEnd = state.quietHoursEnd
+            quietHoursDays = state.quietHoursDays
+            isDefault = state.isDefault
+        }
+    }
+
     public enum Action: Sendable {
         case onAppear
         case loadScope
-        case scopeLoaded(NotificationScope)
+        case scopeLoaded(ScopeData)
         case nameChanged(String)
         case emojiChanged(String)
         case colorChanged(String)
@@ -120,13 +168,23 @@ public struct ScopeEditorFeature: Sendable {
                     guard let scopeId = state.scopeId else { return .none }
                     state.isLoading = true
                     return .run { send in
-                        if let scope = await loadScope(id: scopeId) {
-                            await send(.scopeLoaded(scope))
+                        if let scopeData = await loadScope(id: scopeId) {
+                            await send(.scopeLoaded(scopeData))
                         }
                     }
 
-                case let .scopeLoaded(scope):
-                    state = State(from: scope)
+                case let .scopeLoaded(scopeData):
+                    state.scopeId = scopeData.id
+                    state.name = scopeData.name
+                    state.emoji = scopeData.emoji
+                    state.colorHex = scopeData.colorHex
+                    state.selectedOrganizations = scopeData.organizations
+                    state.selectedRepositories = scopeData.repositories
+                    state.quietHoursEnabled = scopeData.quietHoursEnabled
+                    state.quietHoursStart = scopeData.quietHoursStart
+                    state.quietHoursEnd = scopeData.quietHoursEnd
+                    state.quietHoursDays = scopeData.quietHoursDays
+                    state.isDefault = scopeData.isDefault
                     state.isLoading = false
                     return .none
 
@@ -181,9 +239,11 @@ public struct ScopeEditorFeature: Sendable {
                 case .save:
                     guard state.canSave else { return .none }
                     state.isSaving = true
-                    return .run { [state] send in
+                    let scopeData = ScopeData(from: state)
+
+                    return .run { send in
                         do {
-                            try await saveScope(state)
+                            try await saveScope(scopeData)
                             await send(.saveCompleted)
                         } catch {
                             await send(.errorOccurred(error.localizedDescription))
@@ -214,49 +274,52 @@ public struct ScopeEditorFeature: Sendable {
 // MARK: - Database Operations
 
 @MainActor
-private func loadScope(id: String) async -> NotificationScope? {
+private func loadScope(id: String) async -> ScopeEditorFeature.ScopeData? {
     let container = HubWorksCore.modelContainer
     let context = container.mainContext
 
     let predicate = #Predicate<NotificationScope> { $0.id == id }
     let descriptor = FetchDescriptor<NotificationScope>(predicate: predicate)
 
-    return try? context.fetch(descriptor).first
+    guard let scope = try? context.fetch(descriptor).first else {
+        return nil
+    }
+
+    return ScopeEditorFeature.ScopeData(from: scope)
 }
 
 @MainActor
-private func saveScope(_ state: ScopeEditorFeature.State) async throws {
+private func saveScope(_ data: ScopeEditorFeature.ScopeData) async throws {
     let container = HubWorksCore.modelContainer
     let context = container.mainContext
 
     let scope: NotificationScope
-    if let scopeId = state.scopeId {
+    let scopeId = data.id
+    let predicate = #Predicate<NotificationScope> { $0.id == scopeId }
+    let descriptor = FetchDescriptor<NotificationScope>(predicate: predicate)
+    if let existingScope = try context.fetch(descriptor).first {
         // Edit existing scope
-        let predicate = #Predicate<NotificationScope> { $0.id == scopeId }
-        let descriptor = FetchDescriptor<NotificationScope>(predicate: predicate)
-        guard let existingScope = try context.fetch(descriptor).first else {
-            throw NSError(domain: "ScopeEditor", code: 404, userInfo: [NSLocalizedDescriptionKey: "Scope not found"])
-        }
         scope = existingScope
     } else {
         // Create new scope
         scope = NotificationScope(
-            name: state.name,
-            emoji: state.emoji,
-            colorHex: state.colorHex
+            name: data.name,
+            emoji: data.emoji,
+            colorHex: data.colorHex
         )
+        scope.id = data.id
         context.insert(scope)
     }
 
     // Update scope properties
-    scope.name = state.name
-    scope.emoji = state.emoji
-    scope.colorHex = state.colorHex
-    scope.quietHoursEnabled = state.quietHoursEnabled
-    scope.quietHoursStart = state.quietHoursStart
-    scope.quietHoursEnd = state.quietHoursEnd
-    scope.quietHoursDays = state.quietHoursDays
-    scope.isDefault = state.isDefault
+    scope.name = data.name
+    scope.emoji = data.emoji
+    scope.colorHex = data.colorHex
+    scope.quietHoursEnabled = data.quietHoursEnabled
+    scope.quietHoursStart = data.quietHoursStart
+    scope.quietHoursEnd = data.quietHoursEnd
+    scope.quietHoursDays = data.quietHoursDays
+    scope.isDefault = data.isDefault
     scope.updatedAt = Date()
 
     // Clear existing rules
@@ -268,7 +331,7 @@ private func saveScope(_ state: ScopeEditorFeature.State) async throws {
 
     // Create rules from organizations
     var newRules: [NotificationRule] = []
-    for org in state.selectedOrganizations {
+    for org in data.organizations {
         let rule = NotificationRule(
             organizationPattern: org,
             scope: scope
@@ -278,7 +341,7 @@ private func saveScope(_ state: ScopeEditorFeature.State) async throws {
     }
 
     // Create rules from repositories
-    for repo in state.selectedRepositories {
+    for repo in data.repositories {
         let rule = NotificationRule(
             repositoryPattern: repo,
             scope: scope

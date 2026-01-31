@@ -203,6 +203,23 @@ private struct NotificationsTab: View {
             } footer: {
                 Text("How often HubWorks checks GitHub for new notifications. More frequent polling uses more battery and API quota.")
             }
+
+            Section {
+                NavigationLink {
+                    FocusScopeManagementView(
+                        store: store.scope(state: \.focusScopes, action: \.focusScopes)
+                    )
+                } label: {
+                    Label("Focus Filters", systemImage: "moon.stars")
+                }
+            } header: {
+                Text("Focus Modes")
+            } footer: {
+                Text("""
+                Configure notification filters for different Focus modes. \
+                Filter notifications by organizations and repositories based on your active Focus.
+                """)
+            }
         }
         .formStyle(.grouped)
     }

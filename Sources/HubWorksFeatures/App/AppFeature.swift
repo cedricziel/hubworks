@@ -44,6 +44,7 @@ public struct AppFeature: Sendable {
         case auth(AuthFeature.Action)
         case backgroundRefreshTriggered
         case backgroundRefreshCompleted(Bool)
+        case scenePhaseChanged(ScenePhase)
     }
 
     @Dependency(\.keychainService) var keychainService
@@ -112,6 +113,17 @@ public struct AppFeature: Sendable {
 
                 case .backgroundRefreshCompleted:
                     return .none
+
+                case let .scenePhaseChanged(phase):
+                    // Check for Focus scope changes when app becomes active
+                    switch phase {
+                        case .active:
+                            return .send(.inbox(.checkActiveFocusScope))
+                        case .background, .inactive:
+                            return .none
+                        @unknown default:
+                            return .none
+                    }
             }
         }
     }

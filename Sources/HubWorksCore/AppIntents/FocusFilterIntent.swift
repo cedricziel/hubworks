@@ -3,13 +3,17 @@ import Foundation
 
 @available(iOS 16.0, macOS 13.0, *)
 public struct HubWorksFocusFilterIntent: SetFocusFilterIntent {
-    public static var title: LocalizedStringResource = "Filter GitHub Notifications"
+    nonisolated(unsafe) public static var title: LocalizedStringResource = "Filter GitHub Notifications"
 
-    public static var description: IntentDescription? = IntentDescription(
+    nonisolated(unsafe) public static var description: IntentDescription? = IntentDescription(
         "Show only notifications from specific organizations or repositories"
     )
 
     @Parameter(title: "Scope ID") public var scopeId: String?
+
+    public var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "Filter GitHub Notifications")
+    }
 
     public init() {}
 
@@ -34,9 +38,6 @@ public struct HubWorksFocusFilterIntent: SetFocusFilterIntent {
         return .result()
     }
 }
-
-@available(iOS 16.0, macOS 13.0, *)
-extension HubWorksFocusFilterIntent: ForegroundContinuableIntent {}
 
 extension Notification.Name {
     public static let activeFocusScopeChanged = Notification.Name("activeFocusScopeChanged")

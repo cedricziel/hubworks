@@ -59,8 +59,6 @@ public struct FocusScopeFeature: Sendable {
         case errorOccurred(String)
     }
 
-    @Dependency(\.mainQueue) var mainQueue
-
     public init() {}
 
     public var body: some ReducerOf<Self> {

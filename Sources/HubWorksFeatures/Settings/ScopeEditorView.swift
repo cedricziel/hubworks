@@ -20,10 +20,10 @@ public struct ScopeEditorView: View {
                 }
             } else {
                 Section("Scope Details") {
-                    TextField("Name", text: $store.name)
+                    TextField("Name", text: $store.name.sending(\.nameChanged))
                         .textContentType(.name)
 
-                    TextField("Emoji", text: $store.emoji)
+                    TextField("Emoji", text: $store.emoji.sending(\.emojiChanged))
                         .font(.title2)
 
                     ColorPicker("Color", selection: Binding(
@@ -34,7 +34,7 @@ public struct ScopeEditorView: View {
                     ))
                 }
 
-                Section("Organizations") {
+                Section {
                     ForEach(store.selectedOrganizations, id: \.self) { org in
                         HStack {
                             Text(org)
@@ -61,7 +61,7 @@ public struct ScopeEditorView: View {
                     Text("Filter notifications from specific organizations (e.g., \"mycompany\", \"work-org\")")
                 }
 
-                Section("Repositories") {
+                Section {
                     ForEach(store.selectedRepositories, id: \.self) { repo in
                         HStack {
                             VStack(alignment: .leading) {
@@ -96,7 +96,7 @@ public struct ScopeEditorView: View {
                     Text("Filter notifications from specific repositories (e.g., \"owner/repo\")")
                 }
 
-                Section("Quiet Hours") {
+                Section {
                     Toggle("Enable Quiet Hours", isOn: Binding(
                         get: { store.quietHoursEnabled },
                         set: { _ in store.send(.toggleQuietHours) }
@@ -121,6 +121,8 @@ public struct ScopeEditorView: View {
                             displayedComponents: .hourAndMinute
                         )
                     }
+                } header: {
+                    Text("Quiet Hours")
                 } footer: {
                     if store.quietHoursEnabled {
                         Text("Notifications will be silenced during these hours")
@@ -137,25 +139,27 @@ public struct ScopeEditorView: View {
             }
         }
         .navigationTitle(store.isNewScope ? "New Scope" : "Edit Scope")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    store.send(.save)
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+        #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        store.send(.save)
+                    }
+                    .disabled(!store.canSave || store.isSaving)
                 }
-                .disabled(!store.canSave || store.isSaving)
-            }
 
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    store.send(.cancel)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        store.send(.cancel)
+                    }
+                    .disabled(store.isSaving)
                 }
-                .disabled(store.isSaving)
             }
-        }
-        .onAppear {
-            store.send(.onAppear)
-        }
+            .onAppear {
+                store.send(.onAppear)
+            }
     }
 
     private func dateFromHour(_ hour: Int) -> Date {
@@ -172,7 +176,11 @@ public struct ScopeEditorView: View {
 
 extension Color {
     func toHex() -> String? {
+        #if os(macOS)
+        guard let components = NSColor(self).cgColor.components else { return nil }
+        #else
         guard let components = UIColor(self).cgColor.components else { return nil }
+        #endif
 
         let r = Float(components[0])
         let g = Float(components[1])
