@@ -160,12 +160,15 @@ public struct InboxFeature: Sendable {
                 state.error = nil
                 state.lastUpdated = Date()
 
-                // Deduplicate notifications by ID (keep first occurrence)
+                // Upsert notifications: update existing, insert new
+                // This preserves local state (snoozed, archived) for existing items
                 var seenIds = Set<String>()
-                let uniqueNotifications = notifications.filter { seenIds.insert($0.id).inserted }
 
-                let rowStates = uniqueNotifications.map { notification in
-                    NotificationRowState(
+                for notification in notifications {
+                    // Skip duplicates within this batch
+                    guard seenIds.insert(notification.id).inserted else { continue }
+
+                    let newRowState = NotificationRowState(
                         id: notification.id,
                         threadId: notification.id,
                         title: notification.subject.title,
@@ -178,9 +181,18 @@ public struct InboxFeature: Sendable {
                         updatedAt: ISO8601DateFormatter().date(from: notification.updatedAt) ?? .now,
                         webURL: notification.subject.url.flatMap { URL(string: $0) }
                     )
-                }
 
-                state.notifications = IdentifiedArray(uncheckedUniqueElements: rowStates)
+                    if let existingIndex = state.notifications.index(id: notification.id) {
+                        // Update existing: preserve local state (snoozed, archived)
+                        var updated = newRowState
+                        updated.isSnoozed = state.notifications[existingIndex].isSnoozed
+                        updated.snoozeUntil = state.notifications[existingIndex].snoozeUntil
+                        state.notifications[existingIndex] = updated
+                    } else {
+                        // Insert new
+                        state.notifications.append(newRowState)
+                    }
+                }
                 return .none
 
             case let .notificationsFailed(error):
