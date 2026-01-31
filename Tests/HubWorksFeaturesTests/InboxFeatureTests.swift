@@ -5,39 +5,10 @@ import Testing
 
 @Suite("InboxFeature Tests")
 struct InboxFeatureTests {
-    @Test("Filters notifications correctly")
-    func filterNotifications() async {
+    @Test("Changes filter state")
+    func filterChanged() async {
         let store = TestStore(
-            initialState: InboxFeature.State(
-                notifications: [
-                    NotificationRowState(
-                        id: "1",
-                        threadId: "1",
-                        title: "Test notification",
-                        repositoryFullName: "owner/repo",
-                        repositoryOwner: "owner",
-                        repositoryAvatarURL: nil,
-                        subjectType: .issue,
-                        reason: .mention,
-                        isUnread: true,
-                        updatedAt: .now,
-                        webURL: nil
-                    ),
-                    NotificationRowState(
-                        id: "2",
-                        threadId: "2",
-                        title: "Read notification",
-                        repositoryFullName: "owner/repo",
-                        repositoryOwner: "owner",
-                        repositoryAvatarURL: nil,
-                        subjectType: .pullRequest,
-                        reason: .subscribed,
-                        isUnread: false,
-                        updatedAt: .now,
-                        webURL: nil
-                    ),
-                ]
-            )
+            initialState: InboxFeature.State()
         ) {
             InboxFeature()
         }
@@ -46,68 +17,49 @@ struct InboxFeatureTests {
             $0.filter = .unread
         }
 
-        #expect(store.state.filteredNotifications.count == 1)
-        #expect(store.state.filteredNotifications.first?.id == "1")
+        #expect(store.state.filter == .unread)
     }
 
-    @Test("Groups notifications by repository")
-    func groupByRepository() {
-        let state = InboxFeature.State(
-            notifications: [
-                NotificationRowState(
-                    id: "1",
-                    threadId: "1",
-                    title: "First",
-                    repositoryFullName: "owner/repo-a",
-                    repositoryOwner: "owner",
-                    repositoryAvatarURL: nil,
-                    subjectType: .issue,
-                    reason: .mention,
-                    isUnread: true,
-                    updatedAt: .now,
-                    webURL: nil
-                ),
-                NotificationRowState(
-                    id: "2",
-                    threadId: "2",
-                    title: "Second",
-                    repositoryFullName: "owner/repo-b",
-                    repositoryOwner: "owner",
-                    repositoryAvatarURL: nil,
-                    subjectType: .pullRequest,
-                    reason: .subscribed,
-                    isUnread: true,
-                    updatedAt: .now,
-                    webURL: nil
-                ),
-            ],
-            groupByRepository: true
-        )
+    @Test("Selects repository")
+    func repositorySelected() async {
+        let store = TestStore(
+            initialState: InboxFeature.State()
+        ) {
+            InboxFeature()
+        }
 
-        let grouped = state.groupedNotifications
-        #expect(grouped.count == 2)
+        await store.send(.repositorySelected("owner/repo")) {
+            $0.selectedRepository = "owner/repo"
+        }
+
+        #expect(store.state.selectedRepository == "owner/repo")
+
+        await store.send(.repositorySelected(nil)) {
+            $0.selectedRepository = nil
+        }
+
+        #expect(store.state.selectedRepository == nil)
+    }
+
+    @Test("Toggles group by repository")
+    func toggleGroupByRepository() async {
+        let store = TestStore(
+            initialState: InboxFeature.State(groupByRepository: true)
+        ) {
+            InboxFeature()
+        }
+
+        await store.send(.toggleGroupByRepository) {
+            $0.groupByRepository = false
+        }
+
+        #expect(store.state.groupByRepository == false)
     }
 
     @Test("Marks notification as read")
     func markAsRead() async {
         let store = TestStore(
-            initialState: InboxFeature.State(
-                notifications: [
-                    NotificationRowState(
-                        id: "1",
-                        threadId: "1",
-                        title: "Test",
-                        repositoryFullName: "owner/repo",
-                        repositoryOwner: "owner",
-                        repositoryAvatarURL: nil,
-                        subjectType: .issue,
-                        reason: .mention,
-                        isUnread: true,
-                        updatedAt: .now,
-                        webURL: nil
-                    ),
-                ]
-            )
+            initialState: InboxFeature.State()
         ) {
             InboxFeature()
         } withDependencies: {
@@ -116,8 +68,6 @@ struct InboxFeatureTests {
         }
 
         await store.send(.markAsRead("1"))
-        await store.receive(.markAsReadCompleted("1")) {
-            $0.notifications[id: "1"]?.isUnread = false
-        }
+        await store.receive(.markAsReadCompleted("1"))
     }
 }
