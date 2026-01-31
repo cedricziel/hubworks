@@ -24,7 +24,7 @@ build: build-ios build-macos
 
 # Run tests
 test:
-	xcodebuild test -project HubWorks.xcodeproj -scheme HubWorks-iOS -destination 'platform=iOS Simulator,name=iPhone 16' -configuration Debug
+	xcodebuild test -project HubWorks.xcodeproj -scheme HubWorks-iOS -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug
 
 # Lint code with SwiftLint
 lint:
