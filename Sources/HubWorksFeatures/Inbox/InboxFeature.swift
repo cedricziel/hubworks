@@ -18,6 +18,8 @@ public struct InboxFeature: Sendable {
         public var lastUpdated: Date?
         public var loadingProgress: String? // e.g., "Loading page 2..."
         public var rateLimit: RateLimitInfo? // GitHub API rate limit status
+        public var activeFocusScopeId: String?
+        public var isFocusFilterTemporarilyDisabled: Bool = false
 
         public enum Filter: String, CaseIterable, Sendable {
             case all = "All"
@@ -45,7 +47,9 @@ public struct InboxFeature: Sendable {
             selectedNotificationId: String? = nil,
             lastUpdated: Date? = nil,
             loadingProgress: String? = nil,
-            rateLimit: RateLimitInfo? = nil
+            rateLimit: RateLimitInfo? = nil,
+            activeFocusScopeId: String? = nil,
+            isFocusFilterTemporarilyDisabled: Bool = false
         ) {
             self.isLoading = isLoading
             self.isRefreshing = isRefreshing
@@ -57,6 +61,8 @@ public struct InboxFeature: Sendable {
             self.lastUpdated = lastUpdated
             self.loadingProgress = loadingProgress
             self.rateLimit = rateLimit
+            self.activeFocusScopeId = activeFocusScopeId
+            self.isFocusFilterTemporarilyDisabled = isFocusFilterTemporarilyDisabled
         }
     }
 
@@ -82,12 +88,16 @@ public struct InboxFeature: Sendable {
         case snoozeCompleted(String)
         case refresh
         case refreshCompleted
+        case checkActiveFocusScope
+        case focusScopeChanged(String?)
+        case toggleFocusFilter
     }
 
     @Dependency(\.gitHubAPIClient) var gitHubAPIClient
     @Dependency(\.keychainService) var keychainService
     @Dependency(\.notificationPollingService) var pollingService
     @Dependency(\.notificationPersistence) var persistence
+    @Dependency(\.focusFilterService) var focusFilterService
 
     public init() {}
 
@@ -270,6 +280,25 @@ public struct InboxFeature: Sendable {
 
                 case .refreshCompleted:
                     state.isRefreshing = false
+                    return .none
+
+                case .checkActiveFocusScope:
+                    return .run { send in
+                        let scopeId = await focusFilterService.getActiveScope()
+                        await send(.focusScopeChanged(scopeId))
+                    }
+
+                case let .focusScopeChanged(scopeId):
+                    state.activeFocusScopeId = scopeId
+                    // Reset temporary disable when Focus changes
+                    state.isFocusFilterTemporarilyDisabled = false
+                    UserDefaults.standard.set(false, forKey: "focus_filter_temporarily_disabled")
+                    return .none
+
+                case .toggleFocusFilter:
+                    let newValue = !state.isFocusFilterTemporarilyDisabled
+                    state.isFocusFilterTemporarilyDisabled = newValue
+                    UserDefaults.standard.set(newValue, forKey: "focus_filter_temporarily_disabled")
                     return .none
             }
         }
