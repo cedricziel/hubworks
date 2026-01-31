@@ -67,8 +67,8 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
-  test:
-    name: Run Tests
+  test-ios:
+    name: Run iOS Tests
     runs-on: macos-26
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -85,7 +85,7 @@ jobs:
           cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
           make generate
 
-      - name: Run Tests
+      - name: Run iOS Tests
         run: |
           xcodebuild test \
             -project HubWorks.xcodeproj \
