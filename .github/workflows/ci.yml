@@ -26,6 +26,7 @@ jobs:
       - name: Generate Xcode project
         run: |
           brew install xcodegen
+          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
           make generate
 
       - name: Build iOS
