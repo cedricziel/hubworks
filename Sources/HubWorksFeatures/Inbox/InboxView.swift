@@ -282,9 +282,10 @@ public struct InboxView: View {
             Text("\(rateLimit.remaining)/\(rateLimit.limit)")
                 .foregroundStyle(rateLimit.isLow ? .orange : .secondary)
         }
-        .help(
-            "API Rate Limit: \(rateLimit.remaining) of \(rateLimit.limit) requests remaining. Resets \(rateLimit.reset, format: .relative(presentation: .named))"
-        )
+        .help("""
+        API Rate Limit: \(rateLimit.remaining) of \(rateLimit.limit) requests remaining. \
+        Resets \(rateLimit.reset, format: .relative(presentation: .named))
+        """)
     }
 
     private func rateLimitColor(_ rateLimit: RateLimitInfo) -> Color {

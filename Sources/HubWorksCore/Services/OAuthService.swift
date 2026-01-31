@@ -34,7 +34,7 @@ enum WebAuthManager {
     }
 
     /// Static storage to keep presenter alive during auth
-    private nonisolated(unsafe) static var currentPresenter: Presenter?
+    nonisolated(unsafe) private static var currentPresenter: Presenter?
 
     static func startSession(_ session: ASWebAuthenticationSession) {
         let presenter = Presenter()
@@ -79,7 +79,7 @@ enum WebAuthManager {
     }
 
     /// Static storage to keep presenter alive during auth
-    private nonisolated(unsafe) static var currentPresenter: Presenter?
+    nonisolated(unsafe) private static var currentPresenter: Presenter?
 
     static func startSession(_ session: ASWebAuthenticationSession) {
         let presenter = Presenter()
@@ -517,7 +517,8 @@ extension OAuthService: DependencyKey {
                             request.setValue("application/json", forHTTPHeaderField: "Accept")
                             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-                            let body = "client_id=\(configuration.clientId)&device_code=\(deviceCode)&grant_type=urn:ietf:params:oauth:grant-type:device_code"
+                            let grantType = "urn:ietf:params:oauth:grant-type:device_code"
+                            let body = "client_id=\(configuration.clientId)&device_code=\(deviceCode)&grant_type=\(grantType)"
                             request.httpBody = body.data(using: .utf8)
 
                             do {
@@ -628,7 +629,10 @@ extension OAuthService: DependencyKey {
                                 tokenRequest.setValue("application/json", forHTTPHeaderField: "Accept")
                                 tokenRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-                                let tokenBody = "client_id=\(configuration.clientId)&device_code=\(deviceCodeResponse.deviceCode)&grant_type=urn:ietf:params:oauth:grant-type:device_code"
+                                let grantType = "urn:ietf:params:oauth:grant-type:device_code"
+                                let clientId = configuration.clientId
+                                let deviceCode = deviceCodeResponse.deviceCode
+                                let tokenBody = "client_id=\(clientId)&device_code=\(deviceCode)&grant_type=\(grantType)"
                                 tokenRequest.httpBody = tokenBody.data(using: .utf8)
 
                                 let (tokenData, _) = try await URLSession.shared.data(for: tokenRequest)

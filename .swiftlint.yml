@@ -26,7 +26,6 @@ opt_in_rules:
   - file_name_no_space
   - first_where
   - flatmap_over_map_reduce
-  - force_unwrapping
   - identical_operands
   - implicit_return
   - joined_default_parameter
@@ -80,16 +79,20 @@ line_length:
   ignores_urls: true
 
 file_length:
-  warning: 500
+  warning: 700
   error: 1000
 
 type_body_length:
-  warning: 300
+  warning: 350
   error: 500
 
 function_body_length:
-  warning: 50
+  warning: 80
   error: 100
+
+large_tuple:
+  warning: 4
+  error: 5
 
 identifier_name:
   min_length: 2

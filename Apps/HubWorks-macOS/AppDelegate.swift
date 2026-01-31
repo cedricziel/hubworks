@@ -21,11 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         // Reopen main window when dock icon is clicked
         if !flag {
-            for window in NSApp.windows {
-                if window.canBecomeMain {
-                    window.makeKeyAndOrderFront(nil)
-                    break
-                }
+            if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+                window.makeKeyAndOrderFront(nil)
             }
         }
         return true

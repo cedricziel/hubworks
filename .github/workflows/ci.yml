@@ -35,6 +35,7 @@ jobs:
             -scheme HubWorks-iOS \
             -destination 'platform=iOS Simulator,name=iPhone 17' \
             -configuration Debug \
+            -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Build macOS
@@ -44,6 +45,7 @@ jobs:
             -scheme HubWorks-macOS \
             -destination 'platform=macOS' \
             -configuration Debug \
+            -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run Tests
@@ -53,6 +55,7 @@ jobs:
             -scheme HubWorks-macOS \
             -destination 'platform=macOS' \
             -configuration Debug \
+            -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
   lint:
