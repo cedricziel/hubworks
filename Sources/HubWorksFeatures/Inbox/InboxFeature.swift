@@ -12,19 +12,23 @@ public struct InboxFeature: Sendable {
         public var isRefreshing: Bool = false
         public var error: String?
         public var filter: Filter = .all
+        public var selectedRepository: String? = nil  // nil means all repos
         public var groupByRepository: Bool = true
         public var selectedNotificationId: String?
+        public var lastUpdated: Date? = nil
 
         public enum Filter: String, CaseIterable, Sendable {
             case all = "All"
             case unread = "Unread"
             case participating = "Participating"
+            case mentions = "Mentions"
 
             public var systemImage: String {
                 switch self {
                 case .all: "tray.full"
-                case .unread: "circle.fill"
-                case .participating: "person.fill"
+                case .unread: "envelope.badge"
+                case .participating: "bubble.left.and.bubble.right"
+                case .mentions: "at"
                 }
             }
         }
@@ -35,26 +39,48 @@ public struct InboxFeature: Sendable {
             isRefreshing: Bool = false,
             error: String? = nil,
             filter: Filter = .all,
+            selectedRepository: String? = nil,
             groupByRepository: Bool = true,
-            selectedNotificationId: String? = nil
+            selectedNotificationId: String? = nil,
+            lastUpdated: Date? = nil
         ) {
             self.notifications = notifications
             self.isLoading = isLoading
             self.isRefreshing = isRefreshing
             self.error = error
             self.filter = filter
+            self.selectedRepository = selectedRepository
             self.groupByRepository = groupByRepository
             self.selectedNotificationId = selectedNotificationId
+            self.lastUpdated = lastUpdated
+        }
+
+        /// List of unique repositories from notifications with their unread counts
+        public var repositories: [(name: String, unreadCount: Int)] {
+            let grouped = Dictionary(grouping: notifications.elements) { $0.repositoryFullName }
+            return grouped
+                .map { (name: $0.key, unreadCount: $0.value.filter(\.isUnread).count) }
+                .sorted { $0.name < $1.name }
         }
 
         public var filteredNotifications: IdentifiedArrayOf<NotificationRowState> {
+            var result = notifications
+
+            // Apply repository filter first
+            if let repo = selectedRepository {
+                result = result.filter { $0.repositoryFullName == repo }
+            }
+
+            // Then apply type filter
             switch filter {
             case .all:
-                notifications
+                return result
             case .unread:
-                notifications.filter(\.isUnread)
+                return result.filter(\.isUnread)
             case .participating:
-                notifications.filter { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }
+                return result.filter { $0.reason == .mention || $0.reason == .reviewRequested || $0.reason == .assign }
+            case .mentions:
+                return result.filter { $0.reason == .mention }
             }
         }
 
@@ -81,12 +107,14 @@ public struct InboxFeature: Sendable {
         case notificationsReceived([GitHubNotification])
         case notificationsFailed(String)
         case filterChanged(State.Filter)
+        case repositorySelected(String?)  // nil clears filter
         case toggleGroupByRepository
         case notificationTapped(String)
         case markAsRead(String)
         case markAsReadCompleted(String)
         case markAllAsRead
         case markAllAsReadCompleted
+        case archiveAll
         case archive(String)
         case archiveCompleted(String)
         case snooze(String, Date)
@@ -130,6 +158,7 @@ public struct InboxFeature: Sendable {
                 state.isLoading = false
                 state.isRefreshing = false
                 state.error = nil
+                state.lastUpdated = Date()
 
                 let rowStates = notifications.map { notification in
                     NotificationRowState(
@@ -158,6 +187,10 @@ public struct InboxFeature: Sendable {
 
             case let .filterChanged(filter):
                 state.filter = filter
+                return .none
+
+            case let .repositorySelected(repo):
+                state.selectedRepository = repo
                 return .none
 
             case .toggleGroupByRepository:
@@ -205,6 +238,15 @@ public struct InboxFeature: Sendable {
                     state.notifications[index].isUnread = false
                 }
                 return .none
+
+            case .archiveAll:
+                // Archive all currently filtered notifications
+                let idsToArchive = state.filteredNotifications.map(\.id)
+                return .run { send in
+                    for id in idsToArchive {
+                        await send(.archive(id))
+                    }
+                }
 
             case let .archive(threadId):
                 return .send(.markAsRead(threadId))
