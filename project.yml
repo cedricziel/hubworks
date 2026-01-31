@@ -413,6 +413,8 @@ targets:
       - target: HubWorksCore_iOS
       - package: swift-composable-architecture
         product: ComposableArchitecture
+      - package: swift-dependencies
+        product: Dependencies
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests

@@ -53,8 +53,8 @@ jobs:
         run: |
           xcodebuild test \
             -project HubWorks.xcodeproj \
-            -scheme HubWorks-macOS \
-            -destination 'platform=macOS' \
+            -scheme HubWorks-iOS \
+            -destination 'platform=iOS Simulator,name=iPhone 17' \
             -configuration Debug \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
