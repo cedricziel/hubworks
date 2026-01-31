@@ -160,7 +160,11 @@ public struct InboxFeature: Sendable {
                 state.error = nil
                 state.lastUpdated = Date()
 
-                let rowStates = notifications.map { notification in
+                // Deduplicate notifications by ID (keep first occurrence)
+                var seenIds = Set<String>()
+                let uniqueNotifications = notifications.filter { seenIds.insert($0.id).inserted }
+
+                let rowStates = uniqueNotifications.map { notification in
                     NotificationRowState(
                         id: notification.id,
                         threadId: notification.id,
@@ -176,7 +180,7 @@ public struct InboxFeature: Sendable {
                     )
                 }
 
-                state.notifications = IdentifiedArrayOf(uniqueElements: rowStates)
+                state.notifications = IdentifiedArray(uncheckedUniqueElements: rowStates)
                 return .none
 
             case let .notificationsFailed(error):

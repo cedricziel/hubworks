@@ -182,12 +182,9 @@ extension GitHubAPIClient: DependencyKey {
                 }
 
                 // Paginate through all results until no more pages
-                // Safety limit of 50 pages (5000 notifications) to prevent runaway requests
-                var pageCount = 0
-                let safetyLimit = 50
+                var isFirstPage = true
 
-                while pageCount < safetyLimit {
-                    pageCount += 1
+                while true {
 
                     var request = URLRequest(url: currentURL)
                     request.httpMethod = "GET"
@@ -196,7 +193,7 @@ extension GitHubAPIClient: DependencyKey {
                     request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
 
                     // Only use If-Modified-Since on first request
-                    if pageCount == 1, let lastModified {
+                    if isFirstPage, let lastModified {
                         request.setValue(lastModified, forHTTPHeaderField: "If-Modified-Since")
                     }
 
@@ -207,10 +204,11 @@ extension GitHubAPIClient: DependencyKey {
                     }
 
                     // Capture headers from first response
-                    if pageCount == 1 {
+                    if isFirstPage {
                         currentLastModified = httpResponse.value(forHTTPHeaderField: "Last-Modified")
                         let pollIntervalString = httpResponse.value(forHTTPHeaderField: "X-Poll-Interval")
                         pollInterval = pollIntervalString.flatMap { Int($0) }
+                        isFirstPage = false
                     }
 
                     switch httpResponse.statusCode {
