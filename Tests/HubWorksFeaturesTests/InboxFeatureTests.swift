@@ -67,8 +67,9 @@ struct InboxFeatureTests {
         ) {
             InboxFeature()
         } withDependencies: {
-            $0.keychainService.loadToken = { _ in "test-token" }
+            $0.keychainService.load = { _ in Data("test-token".utf8) }
             $0.gitHubAPIClient.markAsRead = { _, _ in }
+            $0.notificationPersistence.markAsRead = { _ in }
         }
 
         await store.send(.markAsRead("1"))
