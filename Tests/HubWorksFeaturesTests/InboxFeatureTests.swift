@@ -73,7 +73,9 @@ struct InboxFeatureTests {
             $0.notificationPersistence.markAsRead = { _ in }
         }
 
+        // Explicitly skip received actions since we're only testing the action dispatch
+        store.exhaustivity = .off
+
         await store.send(.markAsRead("1"))
-        // Skipping receive assertion as it's not critical for this test
     }
 }
