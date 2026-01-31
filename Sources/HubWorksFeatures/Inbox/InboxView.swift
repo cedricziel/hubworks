@@ -4,6 +4,12 @@ import HubWorksUI
 import SwiftData
 import SwiftUI
 
+/// Represents the unified selection state for the sidebar
+private enum SidebarSelection: Hashable {
+    case filter(InboxFeature.State.Filter)
+    case repository(String)
+}
+
 public struct InboxView: View {
     @Bindable var store: StoreOf<InboxFeature>
 
@@ -161,8 +167,23 @@ public struct InboxView: View {
 
     private var sidebarView: some View {
         List(selection: Binding(
-            get: { store.filter },
-            set: { store.send(.filterChanged($0)) }
+            get: {
+                if let repo = store.selectedRepository {
+                    SidebarSelection.repository(repo)
+                } else {
+                    SidebarSelection.filter(store.filter)
+                }
+            },
+            set: { newSelection in
+                guard let selection = newSelection else { return }
+                switch selection {
+                    case let .filter(filter):
+                        store.send(.repositorySelected(nil))
+                        store.send(.filterChanged(filter))
+                    case let .repository(repo):
+                        store.send(.repositorySelected(repo))
+                }
+            }
         )) {
             // Inbox section
             Section("Inbox") {
@@ -170,14 +191,9 @@ public struct InboxView: View {
                     sidebarRow(
                         title: filter.rawValue,
                         icon: filter.systemImage,
-                        count: countFor(filter: filter),
-                        isSelected: store.filter == filter && store.selectedRepository == nil
+                        count: countFor(filter: filter)
                     )
-                    .tag(filter)
-                    .onTapGesture {
-                        store.send(.repositorySelected(nil))
-                        store.send(.filterChanged(filter))
-                    }
+                    .tag(SidebarSelection.filter(filter))
                 }
             }
 
@@ -188,12 +204,9 @@ public struct InboxView: View {
                         sidebarRow(
                             title: repo.name.components(separatedBy: "/").last ?? repo.name,
                             icon: "folder",
-                            count: repo.unreadCount,
-                            isSelected: store.selectedRepository == repo.name
+                            count: repo.unreadCount
                         )
-                        .onTapGesture {
-                            store.send(.repositorySelected(repo.name))
-                        }
+                        .tag(SidebarSelection.repository(repo.name))
                     }
                 }
             }
@@ -201,7 +214,7 @@ public struct InboxView: View {
         .listStyle(.sidebar)
     }
 
-    private func sidebarRow(title: String, icon: String, count: Int, isSelected: Bool) -> some View {
+    private func sidebarRow(title: String, icon: String, count: Int) -> some View {
         HStack {
             Label(title, systemImage: icon)
             Spacer()
