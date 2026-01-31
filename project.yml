@@ -413,6 +413,8 @@ targets:
       - target: HubWorksCore_iOS
       - package: swift-composable-architecture
         product: ComposableArchitecture
+      - package: swift-dependencies
+        product: Dependencies
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests
@@ -430,6 +432,35 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests
+
+  HubWorksCoreTests_macOS:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/HubWorksCoreTests
+    dependencies:
+      - target: HubWorksCore_macOS
+      - package: swift-composable-architecture
+        product: ComposableArchitecture
+      - package: swift-dependencies
+        product: Dependencies
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests.macos
+
+  HubWorksFeaturesTests_macOS:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/HubWorksFeaturesTests
+    dependencies:
+      - target: HubWorksFeatures_macOS
+      - target: HubWorksCore_macOS
+      - package: swift-composable-architecture
+        product: ComposableArchitecture
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests.macos
 
 schemes:
   HubWorks-iOS:
@@ -465,8 +496,8 @@ schemes:
     test:
       config: Debug
       targets:
-        - HubWorksCoreTests
-        - HubWorksFeaturesTests
+        - HubWorksCoreTests_macOS
+        - HubWorksFeaturesTests_macOS
     profile:
       config: Release
     analyze:
