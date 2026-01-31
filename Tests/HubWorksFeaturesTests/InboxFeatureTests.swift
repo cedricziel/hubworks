@@ -6,6 +6,7 @@ import Testing
 @Suite("InboxFeature Tests")
 struct InboxFeatureTests {
     @Test("Changes filter state")
+    @MainActor
     func filterChanged() async {
         let store = TestStore(
             initialState: InboxFeature.State()
@@ -21,6 +22,7 @@ struct InboxFeatureTests {
     }
 
     @Test("Selects repository")
+    @MainActor
     func repositorySelected() async {
         let store = TestStore(
             initialState: InboxFeature.State()
@@ -42,6 +44,7 @@ struct InboxFeatureTests {
     }
 
     @Test("Toggles group by repository")
+    @MainActor
     func toggleGroupByRepository() async {
         let store = TestStore(
             initialState: InboxFeature.State(groupByRepository: true)
@@ -57,6 +60,7 @@ struct InboxFeatureTests {
     }
 
     @Test("Marks notification as read")
+    @MainActor
     func markAsRead() async {
         let store = TestStore(
             initialState: InboxFeature.State()
