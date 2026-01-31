@@ -462,6 +462,11 @@ schemes:
         HubWorksUI_macOS: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - HubWorksCoreTests
+        - HubWorksFeaturesTests
     profile:
       config: Release
     analyze:
