@@ -74,6 +74,6 @@ struct InboxFeatureTests {
         }
 
         await store.send(.markAsRead("1"))
-        await store.receive(.markAsReadCompleted("1"))
+        await store.receive(\.markAsReadCompleted)
     }
 }
