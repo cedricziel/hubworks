@@ -2,39 +2,36 @@ name: HubWorks
 options:
   bundleIdPrefix: com.cedricziel.hubworks
   deploymentTarget:
-    iOS: "26.0"
-    macOS: "26.0"
-    watchOS: "26.0"
-  xcodeVersion: "16.0"
-  minimumXcodeGenVersion: "2.42.0"
+    iOS: '26.0'
+    macOS: '26.0'
+    watchOS: '26.0'
+  xcodeVersion: '16.0'
+  minimumXcodeGenVersion: 2.42.0
   generateEmptyDirectories: true
   groupSortPosition: top
   skipPackagePluginValidation: true
-
 packages:
   swift-composable-architecture:
     url: https://github.com/pointfreeco/swift-composable-architecture
-    from: "1.17.0"
+    from: 1.17.0
   swift-dependencies:
     url: https://github.com/pointfreeco/swift-dependencies
-    from: "1.0.0"
+    from: 1.0.0
   swift-concurrency-extras:
     url: https://github.com/pointfreeco/swift-concurrency-extras
-    from: "1.0.0"
+    from: 1.0.0
   swift-identified-collections:
     url: https://github.com/pointfreeco/swift-identified-collections
-    from: "1.0.0"
+    from: 1.0.0
   swift-case-paths:
     url: https://github.com/pointfreeco/swift-case-paths
-    from: "1.0.0"
-
+    from: 1.0.0
 configFiles:
   Debug: Config/Debug.xcconfig
   Release: Config/Release.xcconfig
-
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: '6.0'
     ENABLE_USER_SCRIPT_SANDBOXING: false
     SWIFT_STRICT_CONCURRENCY: complete
     SKIP_MACRO_VALIDATION: true
@@ -43,7 +40,6 @@ settings:
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
     Release:
       SWIFT_COMPILATION_MODE: wholemodule
-
 targetTemplates:
   Framework:
     type: framework
@@ -51,17 +47,15 @@ targetTemplates:
       base:
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
-
 targets:
-  # MARK: - iOS App
   HubWorks-iOS:
     type: application
     platform: iOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Apps/HubWorks-iOS
         excludes:
-          - "*.entitlements"
+          - '*.entitlements'
     dependencies:
       - target: HubWorksCore_iOS
       - target: HubWorksFeatures_iOS
@@ -93,8 +87,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: 0.1.1
+        CURRENT_PROJECT_VERSION: '1'
     info:
       path: Apps/HubWorks-iOS/Info.plist
       properties:
@@ -122,7 +116,7 @@ targets:
           - remote-notification
         BGTaskSchedulerPermittedIdentifiers:
           - com.cedricziel.hubworks.refresh
-        NSFaceIDUsageDescription: "HubWorks uses Face ID to protect your GitHub accounts"
+        NSFaceIDUsageDescription: HubWorks uses Face ID to protect your GitHub accounts
         GitHubClientID: $(GITHUB_CLIENT_ID)
         GitHubClientSecret: $(GITHUB_CLIENT_SECRET)
         CFBundleURLTypes:
@@ -131,16 +125,14 @@ targets:
             CFBundleURLName: com.cedricziel.hubworks.oauth
         LSApplicationCategoryType: public.app-category.developer-tools
         ITSAppUsesNonExemptEncryption: false
-
-  # MARK: - macOS App
   HubWorks-macOS:
     type: application
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Apps/HubWorks-macOS
         excludes:
-          - "*.entitlements"
+          - '*.entitlements'
     dependencies:
       - target: HubWorksCore_macOS
       - target: HubWorksFeatures_macOS
@@ -174,11 +166,11 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: 0.1.1
+        CURRENT_PROJECT_VERSION: '1'
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
-          - "@executable_path/../Frameworks"
+          - '@executable_path/../Frameworks'
     info:
       path: Apps/HubWorks-macOS/Info.plist
       properties:
@@ -189,7 +181,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundlePackageType: APPL
         CFBundleExecutable: $(EXECUTABLE_NAME)
-        NSHumanReadableCopyright: "Copyright © 2025 HubWorks. All rights reserved."
+        NSHumanReadableCopyright: Copyright © 2025 HubWorks. All rights reserved.
         GitHubClientID: $(GITHUB_CLIENT_ID)
         GitHubClientSecret: $(GITHUB_CLIENT_SECRET)
         CFBundleURLTypes:
@@ -198,16 +190,14 @@ targets:
             CFBundleURLName: com.cedricziel.hubworks.oauth
         LSApplicationCategoryType: public.app-category.developer-tools
         ITSAppUsesNonExemptEncryption: false
-
-  # MARK: - watchOS App
   HubWorks-watchOS:
     type: application
     platform: watchOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Apps/HubWorks-watchOS
         excludes:
-          - "*.entitlements"
+          - '*.entitlements'
     dependencies:
       - target: HubWorksCore_watchOS
       - target: HubWorksUI_watchOS
@@ -229,8 +219,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: 0.1.1
+        CURRENT_PROJECT_VERSION: '1'
     info:
       path: Apps/HubWorks-watchOS/Info.plist
       properties:
@@ -243,13 +233,11 @@ targets:
         CFBundleExecutable: $(EXECUTABLE_NAME)
         WKApplication: true
         ITSAppUsesNonExemptEncryption: false
-
-  # MARK: - iOS Frameworks
   HubWorksCore_iOS:
     templates:
       - Framework
     platform: iOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksCore
     dependencies:
@@ -266,12 +254,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core
         PRODUCT_NAME: HubWorksCore
         PRODUCT_MODULE_NAME: HubWorksCore
-
   HubWorksFeatures_iOS:
     templates:
       - Framework
     platform: iOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksFeatures
     dependencies:
@@ -290,12 +277,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features
         PRODUCT_NAME: HubWorksFeatures
         PRODUCT_MODULE_NAME: HubWorksFeatures
-
   HubWorksUI_iOS:
     templates:
       - Framework
     platform: iOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksUI
     dependencies:
@@ -305,13 +291,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.ui
         PRODUCT_NAME: HubWorksUI
         PRODUCT_MODULE_NAME: HubWorksUI
-
-  # MARK: - macOS Frameworks
   HubWorksCore_macOS:
     templates:
       - Framework
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksCore
     dependencies:
@@ -328,12 +312,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core
         PRODUCT_NAME: HubWorksCore
         PRODUCT_MODULE_NAME: HubWorksCore
-
   HubWorksFeatures_macOS:
     templates:
       - Framework
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksFeatures
     dependencies:
@@ -352,12 +335,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features
         PRODUCT_NAME: HubWorksFeatures
         PRODUCT_MODULE_NAME: HubWorksFeatures
-
   HubWorksUI_macOS:
     templates:
       - Framework
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksUI
     dependencies:
@@ -367,13 +349,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.ui
         PRODUCT_NAME: HubWorksUI
         PRODUCT_MODULE_NAME: HubWorksUI
-
-  # MARK: - watchOS Frameworks
   HubWorksCore_watchOS:
     templates:
       - Framework
     platform: watchOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksCore
     dependencies:
@@ -390,12 +370,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core
         PRODUCT_NAME: HubWorksCore
         PRODUCT_MODULE_NAME: HubWorksCore
-
   HubWorksUI_watchOS:
     templates:
       - Framework
     platform: watchOS
-    deploymentTarget: "26.0"
+    deploymentTarget: '26.0'
     sources:
       - path: Sources/HubWorksUI
     dependencies:
@@ -405,8 +384,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.ui
         PRODUCT_NAME: HubWorksUI
         PRODUCT_MODULE_NAME: HubWorksUI
-
-  # MARK: - Tests
   HubWorksCoreTests:
     type: bundle.unit-test
     platform: iOS
@@ -421,7 +398,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests
-
   HubWorksFeaturesTests:
     type: bundle.unit-test
     platform: iOS
@@ -435,7 +411,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests
-
   HubWorksCoreTests_macOS:
     type: bundle.unit-test
     platform: macOS
@@ -450,7 +425,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests.macos
-
   HubWorksFeaturesTests_macOS:
     type: bundle.unit-test
     platform: macOS
@@ -464,7 +438,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests.macos
-
 schemes:
   HubWorks-iOS:
     build:
@@ -486,7 +459,6 @@ schemes:
       config: Debug
     archive:
       config: Release
-
   HubWorks-macOS:
     build:
       targets:
@@ -507,7 +479,6 @@ schemes:
       config: Debug
     archive:
       config: Release
-
   HubWorks-watchOS:
     build:
       targets:
