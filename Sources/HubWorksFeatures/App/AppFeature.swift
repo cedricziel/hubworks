@@ -47,10 +47,10 @@ public struct AppFeature: Sendable {
         case scenePhaseChanged(ScenePhase)
     }
 
-    @Dependency(\.keychainService) var keychainService
-    @Dependency(\.backgroundRefreshManager) var backgroundRefreshManager
-    @Dependency(\.localNotificationService) var localNotificationService
-    @Dependency(\.accountCleanupService) var accountCleanupService
+    @Dependency(\.keychainService) private var keychainService
+    @Dependency(\.backgroundRefreshManager) private var backgroundRefreshManager
+    @Dependency(\.localNotificationService) private var localNotificationService
+    @Dependency(\.accountCleanupService) private var accountCleanupService
 
     public init() {}
 

@@ -68,7 +68,7 @@ targets:
         product: IdentifiedCollections
       - package: swift-case-paths
         product: CasePaths
-    preBuildScripts:
+    postCompileScripts:
       - name: Increment Build Number
         script: Scripts/increment-build-number.sh
         basedOnDependencyAnalysis: false
@@ -150,7 +150,7 @@ targets:
         product: IdentifiedCollections
       - package: swift-case-paths
         product: CasePaths
-    preBuildScripts:
+    postCompileScripts:
       - name: Increment Build Number
         script: Scripts/increment-build-number.sh
         basedOnDependencyAnalysis: false

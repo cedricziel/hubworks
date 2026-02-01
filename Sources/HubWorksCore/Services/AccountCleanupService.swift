@@ -47,8 +47,12 @@ extension AccountCleanupService: DependencyKey {
                 // Delete all sync states for the account
                 try await notificationPersistence.deleteAllSyncStatesForAccount(accountId)
 
-                // Delete keychain token (don't fail if it doesn't exist)
-                try? keychainService.delete("github_oauth_token_\(accountId)")
+                // Delete keychain token
+                do {
+                    try keychainService.delete("github_oauth_token_\(accountId)")
+                } catch {
+                    throw AccountCleanupError.keychainDeleteFailed("github_oauth_token_\(accountId)")
+                }
             },
 
             validateAndCleanupOrphans: {
