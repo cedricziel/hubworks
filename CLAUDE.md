@@ -3,7 +3,7 @@
 ## Project Overview
 HubWorks is a cross-platform GitHub notification app for iOS, macOS, and watchOS. It uses on-device polling (no backend) with SwiftData for persistence and TCA (Composable Architecture) for state management.
 
-We use git worktrees to manage multiple parallel agents in the same repository. Ask the user if you should initialize a worktree from main for your changes. Worktrees live in  .claude/worktrees/. Once we finished the work and the user confirms, we can clean up the worktree.
+We use git worktrees to manage multiple parallel agents in the same repository. Ask the repository maintainer whether to initialize a worktree from main for your changes. Worktrees live in .claude/worktrees/. After the work is complete and the maintainer confirms, remove the worktree.
 
 ## Build System
 - **XcodeGen** for project generation - run `make generate` after modifying `project.yml`

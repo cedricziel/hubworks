@@ -176,6 +176,8 @@ public struct ScopeEditorFeature: Sendable {
                     return .run { send in
                         if let scopeData = await loadScope(id: scopeId) {
                             await send(.scopeLoaded(scopeData))
+                        } else {
+                            await send(.errorOccurred("Failed to load scope"))
                         }
                     }
 

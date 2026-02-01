@@ -5,6 +5,14 @@ public struct FocusFilterOnboardingView: View {
 
     public init() {}
 
+    private var settingsPath: String {
+        #if os(macOS)
+        "Open System Settings → Focus → [Your Focus Mode]"
+        #else
+        "Open iOS Settings → Focus → [Your Focus Mode]"
+        #endif
+    }
+
     public var body: some View {
         ScrollView {
             VStack(spacing: 32) {
@@ -64,7 +72,7 @@ public struct FocusFilterOnboardingView: View {
 
                         HowItWorksStep(
                             number: 2,
-                            text: "Open iOS Settings → Focus → [Your Focus Mode]"
+                            text: settingsPath
                         )
 
                         HowItWorksStep(
@@ -114,10 +122,10 @@ public struct FocusFilterOnboardingView: View {
 // MARK: - Supporting Views
 
 private struct FeatureCard: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    let description: String
+    private let icon: String
+    private let iconColor: Color
+    private let title: String
+    private let description: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -139,8 +147,8 @@ private struct FeatureCard: View {
 }
 
 private struct HowItWorksStep: View {
-    let number: Int
-    let text: String
+    private let number: Int
+    private let text: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {

@@ -116,9 +116,9 @@ public struct InboxView: View {
 
                 // Main content
                 Group {
-                    if store.isLoading, notifications.isEmpty {
+                    if store.isLoading, filteredNotifications.isEmpty {
                         ProgressView("Loading notifications...")
-                    } else if notifications.isEmpty {
+                    } else if filteredNotifications.isEmpty {
                         emptyState
                     } else {
                         notificationList

@@ -1,10 +1,11 @@
 import ComposableArchitecture
 import Foundation
 import HubWorksCore
-import SwiftData
 
 @Reducer
 public struct OrganizationRepositoryPickerFeature: Sendable {
+    @Dependency(\.organizationRepositoryService) var organizationRepositoryService
+
     @ObservableState
     public struct State: Equatable {
         public var pickerType: PickerType
@@ -33,6 +34,11 @@ public struct OrganizationRepositoryPickerFeature: Sendable {
         case toggleItem(String)
         case searchTextChanged(String)
         case done
+        case delegate(Delegate)
+
+        public enum Delegate: Sendable {
+            case didFinish(selectedItems: Set<String>)
+        }
     }
 
     public init() {}
@@ -43,7 +49,12 @@ public struct OrganizationRepositoryPickerFeature: Sendable {
                 case .onAppear:
                     state.isLoading = true
                     return .run { [pickerType = state.pickerType] send in
-                        let items = await loadItemsFromDatabase(pickerType: pickerType)
+                        let items: [String] = switch pickerType {
+                            case .organizations:
+                                await organizationRepositoryService.loadOrganizations()
+                            case .repositories:
+                                await organizationRepositoryService.loadRepositories()
+                        }
                         await send(.itemsLoaded(items))
                     }
 
@@ -65,30 +76,11 @@ public struct OrganizationRepositoryPickerFeature: Sendable {
                     return .none
 
                 case .done:
+                    return .send(.delegate(.didFinish(selectedItems: state.selectedItems)))
+
+                case .delegate:
                     return .none
             }
         }
     }
-}
-
-// MARK: - Database Operations
-
-@MainActor
-private func loadItemsFromDatabase(pickerType: OrganizationRepositoryPickerFeature.State.PickerType) async -> [String] {
-    let container = HubWorksCore.modelContainer
-    let context = container.mainContext
-    let descriptor = FetchDescriptor<CachedNotification>()
-
-    guard let notifications = try? context.fetch(descriptor) else {
-        return []
-    }
-
-    let items: Set<String> = switch pickerType {
-        case .organizations:
-            Set(notifications.map(\.repositoryOwner))
-        case .repositories:
-            Set(notifications.map(\.repositoryFullName))
-    }
-
-    return items.sorted()
 }

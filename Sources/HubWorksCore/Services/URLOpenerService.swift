@@ -16,8 +16,7 @@ extension URLOpenerService: DependencyKey {
         #if os(macOS)
         return NSWorkspace.shared.open(url)
         #elseif os(iOS)
-        await UIApplication.shared.open(url)
-        return true
+        return await UIApplication.shared.open(url)
         #else
         return false
         #endif

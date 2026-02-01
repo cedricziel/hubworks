@@ -1,10 +1,10 @@
 import SwiftUI
 
 public struct FocusFilterBannerView: View {
-    let scopeName: String
-    let scopeEmoji: String
-    let isEnabled: Bool
-    let onToggle: () -> Void
+    private let scopeName: String
+    private let scopeEmoji: String
+    private let isEnabled: Bool
+    private let onToggle: () -> Void
 
     public init(
         scopeName: String,

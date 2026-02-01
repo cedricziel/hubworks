@@ -6,6 +6,7 @@ public struct DefaultScopeService {
     public init() {}
 
     /// Creates default scopes if they don't already exist
+    @MainActor
     public func seedDefaultScopesIfNeeded(modelContext: ModelContext) throws {
         // Check if we already have scopes
         let descriptor = FetchDescriptor<NotificationScope>()

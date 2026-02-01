@@ -210,9 +210,25 @@ extension Color {
         guard let components = UIColor(self).cgColor.components else { return nil }
         #endif
 
-        let r = Float(components[0])
-        let g = Float(components[1])
-        let b = Float(components[2])
+        let r: Float
+        let g: Float
+        let b: Float
+
+        if components.count >= 3 {
+            // RGB or RGBA color space
+            r = Float(components[0])
+            g = Float(components[1])
+            b = Float(components[2])
+        } else if components.count == 2 {
+            // Grayscale color space (white + alpha)
+            let gray = Float(components[0])
+            r = gray
+            g = gray
+            b = gray
+        } else {
+            // Unsupported color space
+            return nil
+        }
 
         return String(
             format: "#%02lX%02lX%02lX",
