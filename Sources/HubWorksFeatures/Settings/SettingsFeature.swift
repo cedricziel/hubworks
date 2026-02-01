@@ -70,6 +70,7 @@ public struct SettingsFeature: Sendable {
         case addAccountTapped
         case removeAccount(String)
         case removeAccountCompleted(String)
+        case removeAccountFailed(String, String)
         case pollIntervalChanged(Int)
         case notificationsEnabledChanged(Bool)
         case showUnreadBadgeChanged(Bool)
@@ -79,10 +80,10 @@ public struct SettingsFeature: Sendable {
         case focusScopes(FocusScopeFeature.Action)
     }
 
-    @Dependency(\.keychainService) var keychainService
-    @Dependency(\.localNotificationService) var localNotificationService
-    @Dependency(\.gitHubAPIClient) var gitHubAPIClient
-    @Dependency(\.accountCleanupService) var accountCleanupService
+    @Dependency(\.keychainService) private var keychainService
+    @Dependency(\.localNotificationService) private var localNotificationService
+    @Dependency(\.gitHubAPIClient) private var gitHubAPIClient
+    @Dependency(\.accountCleanupService) private var accountCleanupService
 
     public init() {}
 
@@ -142,12 +143,20 @@ public struct SettingsFeature: Sendable {
 
             case let .removeAccount(accountId):
                 return .run { send in
-                    try? await accountCleanupService.cleanupAccount(accountId)
-                    await send(.removeAccountCompleted(accountId))
+                    do {
+                        try await accountCleanupService.cleanupAccount(accountId)
+                        await send(.removeAccountCompleted(accountId))
+                    } catch {
+                        await send(.removeAccountFailed(accountId, error.localizedDescription))
+                    }
                 }
 
             case let .removeAccountCompleted(accountId):
                 state.accounts.removeAll { $0.id == accountId }
+                return .none
+
+            case let .removeAccountFailed(accountId, errorMessage):
+                state.userLoadError = "Failed to remove account \(accountId): \(errorMessage)"
                 return .none
 
             case let .pollIntervalChanged(interval):
