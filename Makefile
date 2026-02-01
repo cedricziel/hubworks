@@ -34,7 +34,8 @@ archive-ios:
 		-project HubWorks.xcodeproj \
 		-scheme HubWorks-iOS \
 		-configuration Release \
-		-archivePath ./build/HubWorks-iOS.xcarchive
+		-archivePath ./build/HubWorks-iOS.xcarchive \
+		-skipMacroValidation
 
 # Archive macOS app with auto-incremented build number
 archive-macos:
@@ -48,7 +49,8 @@ archive-macos:
 		-project HubWorks.xcodeproj \
 		-scheme HubWorks-macOS \
 		-configuration Release \
-		-archivePath ./build/HubWorks-macOS.xcarchive
+		-archivePath ./build/HubWorks-macOS.xcarchive \
+		-skipMacroValidation
 
 # Run tests
 test:
