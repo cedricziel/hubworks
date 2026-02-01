@@ -78,8 +78,12 @@ public struct FocusScopeFeature: Sendable {
                     state.isLoading = true
                     state.error = nil
                     return .run { send in
-                        let scopes = await loadScopesFromDatabase()
-                        await send(.scopesLoaded(scopes))
+                        do {
+                            let scopes = try await loadScopesFromDatabase()
+                            await send(.scopesLoaded(scopes))
+                        } catch {
+                            await send(.errorOccurred("Failed to load scopes: \(error.localizedDescription)"))
+                        }
                     }
 
                 case let .scopesLoaded(scopes):
@@ -144,22 +148,19 @@ public struct FocusScopeFeature: Sendable {
 // MARK: - Database Operations
 
 @MainActor
-private func loadScopesFromDatabase() async -> [FocusScopeFeature.State.ScopeState] {
+private func loadScopesFromDatabase() async throws -> [FocusScopeFeature.State.ScopeState] {
     let container = HubWorksCore.modelContainer
     let context = container.mainContext
 
     // Seed default scopes if database is empty
     let defaultScopeService = DefaultScopeService()
-    try? defaultScopeService.seedDefaultScopesIfNeeded(modelContext: context)
+    try defaultScopeService.seedDefaultScopesIfNeeded(modelContext: context)
 
     let descriptor = FetchDescriptor<NotificationScope>(
         sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.name)]
     )
 
-    guard let scopes = try? context.fetch(descriptor) else {
-        return []
-    }
-
+    let scopes = try context.fetch(descriptor)
     return scopes.map { FocusScopeFeature.State.ScopeState(from: $0) }
 }
 
