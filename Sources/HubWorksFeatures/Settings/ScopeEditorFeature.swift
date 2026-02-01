@@ -258,16 +258,10 @@ public struct ScopeEditorFeature: Sendable {
 
                 case .saveCompleted:
                     state.isSaving = false
-                    return .run { send in
-                        await send(.delegate(.scopeSaved))
-                        await dismiss()
-                    }
+                    return .send(.delegate(.scopeSaved))
 
                 case .cancel:
-                    return .run { send in
-                        await send(.delegate(.cancelled))
-                        await dismiss()
-                    }
+                    return .send(.delegate(.cancelled))
 
                 case .delegate:
                     return .none

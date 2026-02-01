@@ -3,6 +3,7 @@ import SwiftUI
 
 public struct ScopeEditorView: View {
     @Bindable var store: StoreOf<ScopeEditorFeature>
+    @Environment(\.dismiss) private var dismiss
 
     public init(store: StoreOf<ScopeEditorFeature>) {
         self.store = store
@@ -168,13 +169,19 @@ public struct ScopeEditorView: View {
 
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        store.send(.cancel)
+                        dismiss()
                     }
                     .disabled(store.isSaving)
                 }
             }
             .onAppear {
                 store.send(.onAppear)
+            }
+            .onChange(of: store.isSaving) { wasSaving, isSaving in
+                // Dismiss when save completes successfully (isSaving: true -> false with no error)
+                if wasSaving, !isSaving, store.error == nil {
+                    dismiss()
+                }
             }
     }
 
