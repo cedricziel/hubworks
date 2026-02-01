@@ -49,9 +49,17 @@ public struct ScopeEditorView: View {
                         }
                     }
 
-                    Button {
-                        // Show organization picker
-                        // This will be implemented when navigation is added
+                    NavigationLink {
+                        OrganizationRepositoryPickerView(
+                            store: Store(
+                                initialState: OrganizationRepositoryPickerFeature.State(
+                                    pickerType: .organizations,
+                                    selectedItems: Set(store.selectedOrganizations)
+                                )
+                            ) {
+                                OrganizationRepositoryPickerFeature()
+                            }
+                        )
                     } label: {
                         Label("Add Organization", systemImage: "plus.circle")
                     }
@@ -84,9 +92,17 @@ public struct ScopeEditorView: View {
                         }
                     }
 
-                    Button {
-                        // Show repository picker
-                        // This will be implemented when navigation is added
+                    NavigationLink {
+                        OrganizationRepositoryPickerView(
+                            store: Store(
+                                initialState: OrganizationRepositoryPickerFeature.State(
+                                    pickerType: .repositories,
+                                    selectedItems: Set(store.selectedRepositories)
+                                )
+                            ) {
+                                OrganizationRepositoryPickerFeature()
+                            }
+                        )
                     } label: {
                         Label("Add Repository", systemImage: "plus.circle")
                     }
