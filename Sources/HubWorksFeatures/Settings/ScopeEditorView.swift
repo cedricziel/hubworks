@@ -159,30 +159,33 @@ public struct ScopeEditorView: View {
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        store.send(.save)
-                    }
-                    .disabled(!store.canSave || store.isSaving)
+        #if os(macOS)
+        .frame(minWidth: 600, minHeight: 600)
+        #endif
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    store.send(.save)
                 }
+                .disabled(!store.canSave || store.isSaving)
+            }
 
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .disabled(store.isSaving)
-                }
-            }
-            .onAppear {
-                store.send(.onAppear)
-            }
-            .onChange(of: store.isSaving) { wasSaving, isSaving in
-                // Dismiss when save completes successfully (isSaving: true -> false with no error)
-                if wasSaving, !isSaving, store.error == nil {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
                     dismiss()
                 }
+                .disabled(store.isSaving)
             }
+        }
+        .onAppear {
+            store.send(.onAppear)
+        }
+        .onChange(of: store.isSaving) { wasSaving, isSaving in
+            // Dismiss when save completes successfully (isSaving: true -> false with no error)
+            if wasSaving, !isSaving, store.error == nil {
+                dismiss()
+            }
+        }
     }
 
     private func dateFromHour(_ hour: Int) -> Date {
