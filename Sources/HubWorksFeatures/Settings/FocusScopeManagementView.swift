@@ -25,11 +25,14 @@ public struct FocusScopeManagementView: View {
 
             if store.isLoading {
                 Section {
-                    HStack {
-                        Spacer()
+                    VStack(spacing: 12) {
                         ProgressView()
-                        Spacer()
+                            .controlSize(.large)
+                        Text("Loading scopes...")
+                            .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding()
                 }
             } else if store.scopes.isEmpty {
                 Section {
@@ -74,57 +77,63 @@ public struct FocusScopeManagementView: View {
             }
         }
         .navigationTitle("Focus Filters")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showOnboarding = true
-                } label: {
-                    Label("Help", systemImage: "questionmark.circle")
+        #if os(macOS)
+            .navigationSubtitle("\(store.scopes.count) \(store.scopes.count == 1 ? "scope" : "scopes")")
+            .frame(minWidth: 600, minHeight: 500)
+        #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
                 }
 
-                Button {
-                    store.send(.createNewScope)
-                } label: {
-                    Label("Add", systemImage: "plus")
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        store.send(.createNewScope)
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                    }
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        showOnboarding = true
+                    } label: {
+                        Label("Help", systemImage: "questionmark.circle")
+                    }
                 }
             }
-        }
-        .onAppear {
-            store.send(.onAppear)
-        }
-        .sheet(isPresented: $showOnboarding) {
-            NavigationStack {
-                FocusFilterOnboardingView()
+            .onAppear {
+                store.send(.onAppear)
             }
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { store.isCreatingNewScope || store.editingScopeId != nil },
-                set: { if !$0 { store.send(.dismissScopeEditor) } }
-            )
-        ) {
-            NavigationStack {
-                if store.isCreatingNewScope {
-                    ScopeEditorView(
-                        store: Store(initialState: ScopeEditorFeature.State()) {
-                            ScopeEditorFeature()
-                        }
-                    )
-                } else if let editingScopeId = store.editingScopeId {
-                    ScopeEditorView(
-                        store: Store(initialState: ScopeEditorFeature.State(scopeId: editingScopeId)) {
-                            ScopeEditorFeature()
-                        }
-                    )
+            .sheet(isPresented: $showOnboarding) {
+                NavigationStack {
+                    FocusFilterOnboardingView()
                 }
             }
-        }
+            .sheet(
+                isPresented: Binding(
+                    get: { store.isCreatingNewScope || store.editingScopeId != nil },
+                    set: { if !$0 { store.send(.dismissScopeEditor) } }
+                )
+            ) {
+                NavigationStack {
+                    if store.isCreatingNewScope {
+                        ScopeEditorView(
+                            store: Store(initialState: ScopeEditorFeature.State()) {
+                                ScopeEditorFeature()
+                            }
+                        )
+                    } else if let editingScopeId = store.editingScopeId {
+                        ScopeEditorView(
+                            store: Store(initialState: ScopeEditorFeature.State(scopeId: editingScopeId)) {
+                                ScopeEditorFeature()
+                            }
+                        )
+                    }
+                }
+            }
     }
 }
 
