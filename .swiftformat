@@ -40,8 +40,8 @@
 --enable redundantType
 --enable redundantVoidReturnType
 --enable semicolons
---enable sortedImports
---enable sortedSwitchCases
+--enable sortImports
+--enable sortSwitchCases
 --enable spaceAroundBraces
 --enable spaceAroundBrackets
 --enable spaceAroundComments
