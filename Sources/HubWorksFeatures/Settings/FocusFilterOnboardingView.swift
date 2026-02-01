@@ -122,10 +122,10 @@ public struct FocusFilterOnboardingView: View {
 // MARK: - Supporting Views
 
 private struct FeatureCard: View {
-    private let icon: String
-    private let iconColor: Color
-    private let title: String
-    private let description: String
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let description: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -147,8 +147,8 @@ private struct FeatureCard: View {
 }
 
 private struct HowItWorksStep: View {
-    private let number: Int
-    private let text: String
+    let number: Int
+    let text: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
