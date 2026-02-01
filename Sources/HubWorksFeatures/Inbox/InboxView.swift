@@ -151,6 +151,7 @@ public struct InboxView: View {
             } label: {
                 Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
             }
+            .help("Filter notifications by type")
         }
 
         ToolbarItem(placement: .primaryAction) {
@@ -160,6 +161,7 @@ public struct InboxView: View {
                 Label("Mark All Read", systemImage: "checkmark.circle")
             }
             .disabled(unreadCount == 0)
+            .help("Mark all notifications as read")
         }
     }
     #endif
@@ -373,6 +375,7 @@ public struct InboxView: View {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
             .keyboardShortcut("r", modifiers: .command)
+            .help("Refresh notifications (⌘R)")
         }
 
         ToolbarItem(placement: .primaryAction) {
@@ -383,6 +386,7 @@ public struct InboxView: View {
             }
             .disabled(unreadCount == 0)
             .keyboardShortcut("u", modifiers: [.command, .shift])
+            .help("Mark all notifications as read (⌘⇧U)")
         }
 
         ToolbarItem(placement: .primaryAction) {
@@ -392,6 +396,7 @@ public struct InboxView: View {
                 Label("Archive All", systemImage: "archivebox")
             }
             .disabled(filteredNotifications.isEmpty)
+            .help("Archive all visible notifications")
         }
     }
     #endif

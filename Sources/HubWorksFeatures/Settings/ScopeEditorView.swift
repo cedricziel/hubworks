@@ -168,6 +168,7 @@ public struct ScopeEditorView: View {
                     store.send(.save)
                 }
                 .disabled(!store.canSave || store.isSaving)
+                .help("Save notification scope")
             }
 
             ToolbarItem(placement: .cancellationAction) {
@@ -175,6 +176,7 @@ public struct ScopeEditorView: View {
                     dismiss()
                 }
                 .disabled(store.isSaving)
+                .help("Discard changes and close")
             }
         }
         .onAppear {

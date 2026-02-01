@@ -91,6 +91,7 @@ public struct FocusScopeManagementView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .help("Close Focus Filters settings")
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -99,6 +100,7 @@ public struct FocusScopeManagementView: View {
                     } label: {
                         Label("Add", systemImage: "plus")
                     }
+                    .help("Create new notification scope")
                 }
 
                 ToolbarItem(placement: .automatic) {
@@ -107,6 +109,7 @@ public struct FocusScopeManagementView: View {
                     } label: {
                         Label("Help", systemImage: "questionmark.circle")
                     }
+                    .help("Show Focus Filters onboarding guide")
                 }
             }
             .onAppear {

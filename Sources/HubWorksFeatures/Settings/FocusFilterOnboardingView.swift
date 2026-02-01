@@ -105,6 +105,7 @@ public struct FocusFilterOnboardingView: View {
                     Button("Skip") {
                         dismiss()
                     }
+                    .help("Close onboarding guide")
                 }
             }
     }

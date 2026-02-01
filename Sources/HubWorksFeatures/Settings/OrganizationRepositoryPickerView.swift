@@ -53,6 +53,7 @@ public struct OrganizationRepositoryPickerView: View {
                     Button("Done") {
                         store.send(.done)
                     }
+                    .help("Apply selection and close")
                 }
             }
             .onAppear {
