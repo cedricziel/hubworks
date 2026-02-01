@@ -31,7 +31,7 @@ public struct SettingsView: View {
                     Label("General", systemImage: "info.circle")
                 }
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 700, height: 550)
         .onAppear {
             store.send(.onAppear)
         }
