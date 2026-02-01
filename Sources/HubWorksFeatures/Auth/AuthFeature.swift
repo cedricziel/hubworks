@@ -57,6 +57,7 @@ public struct AuthFeature: Sendable {
     @Dependency(\.oauthService) var oauthService
     @Dependency(\.keychainService) var keychainService
     @Dependency(\.gitHubAPIClient) var gitHubAPIClient
+    @Dependency(\.accountCleanupService) var accountCleanupService
 
     public init() {}
 
@@ -164,7 +165,7 @@ public struct AuthFeature: Sendable {
 
                 case .signOutTapped:
                     return .run { send in
-                        try? keychainService.delete("github_oauth_token_default")
+                        try? await accountCleanupService.cleanupAccount("default")
                         await send(.signOutCompleted)
                     }
 

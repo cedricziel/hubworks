@@ -50,6 +50,7 @@ public struct AppFeature: Sendable {
     @Dependency(\.keychainService) var keychainService
     @Dependency(\.backgroundRefreshManager) var backgroundRefreshManager
     @Dependency(\.localNotificationService) var localNotificationService
+    @Dependency(\.accountCleanupService) var accountCleanupService
 
     public init() {}
 
@@ -68,6 +69,9 @@ public struct AppFeature: Sendable {
             switch action {
                 case .onAppear:
                     return .run { send in
+                        // Clean up any orphaned data from previous sessions or bundle ID changes
+                        try? await accountCleanupService.validateAndCleanupOrphans()
+
                         // Check if we have any stored tokens
                         let hasToken = keychainService.exists("github_oauth_token_default")
                         await send(.checkAuthenticationCompleted(hasToken))

@@ -82,6 +82,7 @@ public struct SettingsFeature: Sendable {
     @Dependency(\.keychainService) var keychainService
     @Dependency(\.localNotificationService) var localNotificationService
     @Dependency(\.gitHubAPIClient) var gitHubAPIClient
+    @Dependency(\.accountCleanupService) var accountCleanupService
 
     public init() {}
 
@@ -141,7 +142,7 @@ public struct SettingsFeature: Sendable {
 
             case let .removeAccount(accountId):
                 return .run { send in
-                    try? keychainService.delete("github_oauth_token_\(accountId)")
+                    try? await accountCleanupService.cleanupAccount(accountId)
                     await send(.removeAccountCompleted(accountId))
                 }
 

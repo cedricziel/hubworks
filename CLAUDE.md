@@ -7,8 +7,9 @@ We use git worktrees to manage multiple parallel agents in the same repository. 
 
 ## Build System
 - **XcodeGen** for project generation - run `make generate` after modifying `project.yml`
-- **Swift 6.0** with complete strict concurrency checking
+- **Swift 6.2** with complete strict concurrency checking
 - **Deployment targets**: iOS 26.0, macOS 26.0, watchOS 26.0
+- **iOS builds**: use iphone 17 simulator
 
 ## Key Commands
 ```bash

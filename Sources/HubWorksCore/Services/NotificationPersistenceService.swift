@@ -15,6 +15,12 @@ public struct NotificationPersistenceService: Sendable {
     /// Delete all notifications for an account
     public var deleteAllForAccount: @Sendable (_ accountId: String) async throws -> Void
 
+    /// Delete all read states for an account
+    public var deleteAllReadStatesForAccount: @Sendable (_ accountId: String) async throws -> Void
+
+    /// Delete all sync states for an account
+    public var deleteAllSyncStatesForAccount: @Sendable (_ accountId: String) async throws -> Void
+
     /// Mark notification as read
     public var markAsRead: @Sendable (_ threadId: String) async throws -> Void
 
@@ -148,6 +154,36 @@ extension NotificationPersistenceService: DependencyKey {
                     let toDelete = (try? context.fetch(descriptor)) ?? []
                     for notification in toDelete {
                         context.delete(notification)
+                    }
+                    try? context.save()
+                }
+            },
+
+            deleteAllReadStatesForAccount: { accountId in
+                await MainActor.run {
+                    let container = HubWorksCore.modelContainer
+                    let context = container.mainContext
+                    let predicate = #Predicate<ReadState> { $0.accountId == accountId }
+                    let descriptor = FetchDescriptor<ReadState>(predicate: predicate)
+
+                    let toDelete = (try? context.fetch(descriptor)) ?? []
+                    for readState in toDelete {
+                        context.delete(readState)
+                    }
+                    try? context.save()
+                }
+            },
+
+            deleteAllSyncStatesForAccount: { accountId in
+                await MainActor.run {
+                    let container = HubWorksCore.modelContainer
+                    let context = container.mainContext
+                    let predicate = #Predicate<SyncState> { $0.accountId == accountId }
+                    let descriptor = FetchDescriptor<SyncState>(predicate: predicate)
+
+                    let toDelete = (try? context.fetch(descriptor)) ?? []
+                    for syncState in toDelete {
+                        context.delete(syncState)
                     }
                     try? context.save()
                 }
