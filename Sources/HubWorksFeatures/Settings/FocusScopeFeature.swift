@@ -133,6 +133,11 @@ public struct FocusScopeFeature: Sendable {
 private func loadScopesFromDatabase() async -> [FocusScopeFeature.State.ScopeState] {
     let container = HubWorksCore.modelContainer
     let context = container.mainContext
+
+    // Seed default scopes if database is empty
+    let defaultScopeService = DefaultScopeService()
+    try? defaultScopeService.seedDefaultScopesIfNeeded(modelContext: context)
+
     let descriptor = FetchDescriptor<NotificationScope>(
         sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.name)]
     )
