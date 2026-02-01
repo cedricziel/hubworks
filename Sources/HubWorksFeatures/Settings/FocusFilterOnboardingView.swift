@@ -43,7 +43,7 @@ public struct FocusFilterOnboardingView: View {
                     )
 
                     FeatureCard(
-                        icon: "moon.zzz.circle.fill",
+                        icon: "moon.zzz",
                         iconColor: .indigo,
                         title: "Sleep Focus",
                         description: "Silence all notifications during sleep. Wake up to a focused inbox."

@@ -76,7 +76,7 @@ public struct InboxFeature: Sendable {
         case filterChanged(State.Filter)
         case repositorySelected(String?) // nil clears filter
         case toggleGroupByRepository
-        case notificationTapped(String)
+        case notificationTapped(String, URL?)
         case markAsRead(String)
         case markAsReadCompleted(String)
         case markAllAsRead
@@ -98,6 +98,7 @@ public struct InboxFeature: Sendable {
     @Dependency(\.notificationPollingService) var pollingService
     @Dependency(\.notificationPersistence) var persistence
     @Dependency(\.focusFilterService) var focusFilterService
+    @Dependency(\.urlOpener) var urlOpener
 
     public init() {}
 
@@ -180,9 +181,18 @@ public struct InboxFeature: Sendable {
                     state.groupByRepository.toggle()
                     return .none
 
-                case let .notificationTapped(id):
-                    state.selectedNotificationId = id
-                    return .none
+                case let .notificationTapped(threadId, url):
+                    state.selectedNotificationId = threadId
+                    guard let url else {
+                        // No URL available - just mark as read
+                        return .send(.markAsRead(threadId))
+                    }
+                    return .run { [urlOpener] send in
+                        // Open URL in browser first for immediate user feedback
+                        _ = await urlOpener.open(url)
+                        // Then mark as read
+                        await send(.markAsRead(threadId))
+                    }
 
                 case let .markAsRead(threadId):
                     return .run { [persistence, keychainService, gitHubAPIClient] send in

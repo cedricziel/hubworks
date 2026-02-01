@@ -163,6 +163,7 @@ private struct AccountRow: View {
 
 private struct NotificationsTab: View {
     @Bindable var store: StoreOf<SettingsFeature>
+    @State private var showFocusFilters = false
 
     var body: some View {
         Form {
@@ -205,13 +206,17 @@ private struct NotificationsTab: View {
             }
 
             Section {
-                NavigationLink {
-                    FocusScopeManagementView(
-                        store: store.scope(state: \.focusScopes, action: \.focusScopes)
-                    )
+                Button {
+                    showFocusFilters = true
                 } label: {
-                    Label("Focus Filters", systemImage: "moon.stars")
+                    HStack {
+                        Label("Focus Filters", systemImage: "moon.stars")
+                        Spacer()
+                        Text("Configure...")
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .buttonStyle(.plain)
             } header: {
                 Text("Focus Modes")
             } footer: {
@@ -222,6 +227,11 @@ private struct NotificationsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $showFocusFilters) {
+            FocusScopeManagementView(
+                store: store.scope(state: \.focusScopes, action: \.focusScopes)
+            )
+        }
     }
 }
 
