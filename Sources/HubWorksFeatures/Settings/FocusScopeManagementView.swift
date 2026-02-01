@@ -36,11 +36,16 @@ public struct FocusScopeManagementView: View {
                 }
             } else if store.scopes.isEmpty {
                 Section {
-                    ContentUnavailableView(
-                        "No Scopes",
-                        systemImage: "moon.stars",
-                        description: Text("Create a scope to filter notifications based on Focus modes")
-                    )
+                    ContentUnavailableView {
+                        Label("No Scopes", systemImage: "moon.stars")
+                    } description: {
+                        Text("Create a scope to filter notifications based on Focus modes")
+                    } actions: {
+                        Button("Reload") {
+                            store.send(.loadScopes)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                 }
             } else {
                 Section("Notification Scopes") {
