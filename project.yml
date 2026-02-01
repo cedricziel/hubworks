@@ -402,6 +402,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests
+        GENERATE_INFOPLIST_FILE: true
   HubWorksFeaturesTests:
     type: bundle.unit-test
     platform: iOS
@@ -415,6 +416,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests
+        GENERATE_INFOPLIST_FILE: true
   HubWorksCoreTests_macOS:
     type: bundle.unit-test
     platform: macOS
@@ -429,6 +431,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.core.tests.macos
+        GENERATE_INFOPLIST_FILE: true
   HubWorksFeaturesTests_macOS:
     type: bundle.unit-test
     platform: macOS
@@ -442,6 +445,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests.macos
+        GENERATE_INFOPLIST_FILE: true
 schemes:
   HubWorks-iOS:
     build:
