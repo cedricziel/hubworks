@@ -413,6 +413,8 @@ targets:
       - target: HubWorksCore_iOS
       - package: swift-composable-architecture
         product: ComposableArchitecture
+      - package: swift-case-paths
+        product: CasePaths
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests
@@ -442,6 +444,8 @@ targets:
       - target: HubWorksCore_macOS
       - package: swift-composable-architecture
         product: ComposableArchitecture
+      - package: swift-case-paths
+        product: CasePaths
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.hubworks.features.tests.macos
