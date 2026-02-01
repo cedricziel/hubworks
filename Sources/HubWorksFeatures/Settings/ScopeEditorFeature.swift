@@ -149,6 +149,12 @@ public struct ScopeEditorFeature: Sendable {
         case saveCompleted
         case cancel
         case errorOccurred(String)
+        case delegate(Delegate)
+
+        public enum Delegate: Sendable {
+            case scopeSaved
+            case cancelled
+        }
     }
 
     @Dependency(\.dismiss) var dismiss
@@ -252,14 +258,19 @@ public struct ScopeEditorFeature: Sendable {
 
                 case .saveCompleted:
                     state.isSaving = false
-                    return .run { _ in
+                    return .run { send in
+                        await send(.delegate(.scopeSaved))
                         await dismiss()
                     }
 
                 case .cancel:
-                    return .run { _ in
+                    return .run { send in
+                        await send(.delegate(.cancelled))
                         await dismiss()
                     }
+
+                case .delegate:
+                    return .none
 
                 case let .errorOccurred(error):
                     state.error = error

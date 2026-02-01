@@ -11,6 +11,8 @@ public struct FocusScopeFeature: Sendable {
         public var selectedScopeId: String?
         public var isLoading: Bool = false
         public var error: String?
+        public var editingScopeId: String?
+        public var isCreatingNewScope: Bool = false
 
         public struct ScopeState: Equatable, Identifiable, Sendable {
             public let id: String
@@ -36,12 +38,16 @@ public struct FocusScopeFeature: Sendable {
             scopes: [ScopeState] = [],
             selectedScopeId: String? = nil,
             isLoading: Bool = false,
-            error: String? = nil
+            error: String? = nil,
+            editingScopeId: String? = nil,
+            isCreatingNewScope: Bool = false
         ) {
             self.scopes = scopes
             self.selectedScopeId = selectedScopeId
             self.isLoading = isLoading
             self.error = error
+            self.editingScopeId = editingScopeId
+            self.isCreatingNewScope = isCreatingNewScope
         }
     }
 
@@ -57,6 +63,7 @@ public struct FocusScopeFeature: Sendable {
         case assignToFocusMode(scopeId: String, focusIdentifier: String?)
         case focusModeAssigned
         case errorOccurred(String)
+        case dismissScopeEditor
     }
 
     public init() {}
@@ -85,11 +92,13 @@ public struct FocusScopeFeature: Sendable {
                     return .none
 
                 case .createNewScope:
-                    // Navigation handled by view
+                    state.isCreatingNewScope = true
+                    state.editingScopeId = nil
                     return .none
 
-                case .editScope:
-                    // Navigation handled by view
+                case let .editScope(id):
+                    state.editingScopeId = id
+                    state.isCreatingNewScope = false
                     return .none
 
                 case let .deleteScope(id):
@@ -122,6 +131,11 @@ public struct FocusScopeFeature: Sendable {
                     state.error = error
                     state.isLoading = false
                     return .none
+
+                case .dismissScopeEditor:
+                    state.isCreatingNewScope = false
+                    state.editingScopeId = nil
+                    return .send(.loadScopes)
             }
         }
     }

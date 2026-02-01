@@ -98,6 +98,28 @@ public struct FocusScopeManagementView: View {
                 FocusFilterOnboardingView()
             }
         }
+        .sheet(
+            isPresented: Binding(
+                get: { store.isCreatingNewScope || store.editingScopeId != nil },
+                set: { if !$0 { store.send(.dismissScopeEditor) } }
+            )
+        ) {
+            NavigationStack {
+                if store.isCreatingNewScope {
+                    ScopeEditorView(
+                        store: Store(initialState: ScopeEditorFeature.State()) {
+                            ScopeEditorFeature()
+                        }
+                    )
+                } else if let editingScopeId = store.editingScopeId {
+                    ScopeEditorView(
+                        store: Store(initialState: ScopeEditorFeature.State(scopeId: editingScopeId)) {
+                            ScopeEditorFeature()
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
