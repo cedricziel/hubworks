@@ -18,6 +18,29 @@ make lint        # Run SwiftLint
 make format      # Run SwiftFormat
 ```
 
+## Archiving & Releases
+```bash
+make archive-ios    # Archive iOS app (auto-increments build number)
+make archive-macos  # Archive macOS app (auto-increments build number)
+```
+
+### Release Automation
+The project uses **release-please** for automated version management:
+
+- **Semantic commits** automatically trigger version bumps:
+  - `feat:` → minor version bump (0.1.0 → 0.2.0)
+  - `fix:` → patch version bump (0.1.0 → 0.1.1)
+  - `feat!:` or `BREAKING CHANGE:` → major version bump (0.1.0 → 1.0.0)
+
+- **Release workflow**:
+  1. Push semantic commits to `main` branch
+  2. Release-please creates/updates a release PR
+  3. PR updates `project.yml` versions and CHANGELOG.md
+  4. Merge the release PR
+  5. GitHub release is created with macOS DMG attached
+
+- **Custom token (optional)**: Set `RELEASE_PLEASE_TOKEN` secret in repository to allow release PRs to trigger other workflows
+
 ## Architecture
 
 ### Module Structure

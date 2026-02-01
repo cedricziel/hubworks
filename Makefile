@@ -1,4 +1,4 @@
-.PHONY: all generate build test lint format clean install-hooks
+.PHONY: all generate build test lint format clean install-hooks archive-ios archive-macos
 
 # Default target
 all: generate
@@ -21,6 +21,34 @@ build-watchos:
 
 # Build all targets
 build: build-ios build-macos
+
+# Archive iOS app with auto-incremented build number
+archive-ios:
+	@echo "Incrementing build number..."
+	@BUILD_NUMBER=$$(git rev-list --count HEAD); \
+	sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$$BUILD_NUMBER\"/g" project.yml
+	@make generate
+	@echo "Archiving iOS app..."
+	@mkdir -p build
+	xcodebuild archive \
+		-project HubWorks.xcodeproj \
+		-scheme HubWorks-iOS \
+		-configuration Release \
+		-archivePath ./build/HubWorks-iOS.xcarchive
+
+# Archive macOS app with auto-incremented build number
+archive-macos:
+	@echo "Incrementing build number..."
+	@BUILD_NUMBER=$$(git rev-list --count HEAD); \
+	sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$$BUILD_NUMBER\"/g" project.yml
+	@make generate
+	@echo "Archiving macOS app..."
+	@mkdir -p build
+	xcodebuild archive \
+		-project HubWorks.xcodeproj \
+		-scheme HubWorks-macOS \
+		-configuration Release \
+		-archivePath ./build/HubWorks-macOS.xcarchive
 
 # Run tests
 test:

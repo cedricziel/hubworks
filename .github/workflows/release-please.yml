@@ -1,0 +1,74 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  build-and-upload-macos:
+    name: Build and Upload macOS App
+    runs-on: macos-26
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Install dependencies
+        run: brew install xcodegen
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Archive macOS app
+        run: make archive-macos
+
+      - name: Create DMG
+        run: |
+          # Create a DMG from the archive
+          APP_PATH="./build/HubWorks-macOS.xcarchive/Products/Applications/HubWorks.app"
+          DMG_PATH="./build/HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg"
+
+          # Create temporary DMG directory
+          mkdir -p ./build/dmg
+          cp -R "$APP_PATH" ./build/dmg/
+
+          # Create DMG
+          hdiutil create -volname "HubWorks" -srcfolder ./build/dmg -ov -format UDZO "$DMG_PATH"
+
+          echo "DMG created at: $DMG_PATH"
+
+      - name: Upload macOS DMG to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./build/HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg
+          asset_name: HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg
+          asset_content_type: application/x-apple-diskimage
