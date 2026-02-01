@@ -418,7 +418,7 @@ public struct InboxView: View {
                         CachedNotificationRowView(
                             notification: notification,
                             onTap: {
-                                store.send(.notificationTapped(notification.threadId))
+                                store.send(.notificationTapped(notification.threadId, notification.webURL))
                             },
                             onMarkAsRead: {
                                 store.send(.markAsRead(notification.threadId))

@@ -254,4 +254,61 @@ struct InboxFeatureTests {
         }
         #expect(store.state.isFocusFilterTemporarilyDisabled == true)
     }
+
+    @Test("Opens notification URL and marks as read when tapped with URL")
+    @MainActor
+    func notificationTappedOpensURLAndMarksAsRead() async throws {
+        var openedURL: URL?
+        let testURL = try #require(URL(string: "https://github.com/owner/repo/issues/123"))
+
+        let store = TestStore(
+            initialState: InboxFeature.State()
+        ) {
+            InboxFeature()
+        } withDependencies: {
+            $0.urlOpener.open = { url in
+                openedURL = url
+                return true
+            }
+            $0.keychainService.load = { _ in Data("test-token".utf8) }
+            $0.gitHubAPIClient.markAsRead = { _, _ in }
+            $0.notificationPersistence.markAsRead = { _ in }
+        }
+
+        store.exhaustivity = .off
+
+        await store.send(.notificationTapped("thread-123", testURL)) {
+            $0.selectedNotificationId = "thread-123"
+        }
+
+        #expect(openedURL == testURL)
+    }
+
+    @Test("Marks as read when notification has no URL")
+    @MainActor
+    func notificationTappedWithoutURLJustMarksAsRead() async {
+        var urlOpenerCalled = false
+
+        let store = TestStore(
+            initialState: InboxFeature.State()
+        ) {
+            InboxFeature()
+        } withDependencies: {
+            $0.urlOpener.open = { _ in
+                urlOpenerCalled = true
+                return false
+            }
+            $0.keychainService.load = { _ in Data("test-token".utf8) }
+            $0.gitHubAPIClient.markAsRead = { _, _ in }
+            $0.notificationPersistence.markAsRead = { _ in }
+        }
+
+        store.exhaustivity = .off
+
+        await store.send(.notificationTapped("thread-123", nil)) {
+            $0.selectedNotificationId = "thread-123"
+        }
+
+        #expect(urlOpenerCalled == false)
+    }
 }

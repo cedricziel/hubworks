@@ -5,7 +5,7 @@ import AppKit
 #if canImport(UIKit)
 import UIKit
 #endif
-import Dependencies
+import ComposableArchitecture
 
 public struct URLOpenerService: Sendable {
     public var open: @Sendable (URL) async -> Bool

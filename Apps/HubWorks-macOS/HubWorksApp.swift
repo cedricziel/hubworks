@@ -132,7 +132,7 @@ struct MenuBarContentView: View {
                         ForEach(displayedNotifications, id: \.threadId) { notification in
                             NotificationMenuRowView(notification: notification)
                                 .onTapGesture {
-                                    store.send(.inbox(.notificationTapped(notification.threadId)))
+                                    store.send(.inbox(.notificationTapped(notification.threadId, notification.webURL)))
                                 }
                         }
                     }
