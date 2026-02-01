@@ -68,6 +68,10 @@ targets:
         product: IdentifiedCollections
       - package: swift-case-paths
         product: CasePaths
+    preBuildScripts:
+      - name: Increment Build Number
+        script: Scripts/increment-build-number.sh
+        basedOnDependencyAnalysis: false
     entitlements:
       path: Apps/HubWorks-iOS/HubWorks-iOS.entitlements
       properties:
@@ -146,6 +150,10 @@ targets:
         product: IdentifiedCollections
       - package: swift-case-paths
         product: CasePaths
+    preBuildScripts:
+      - name: Increment Build Number
+        script: Scripts/increment-build-number.sh
+        basedOnDependencyAnalysis: false
     entitlements:
       path: Apps/HubWorks-macOS/HubWorks-macOS.entitlements
       properties:

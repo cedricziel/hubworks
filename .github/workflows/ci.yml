@@ -11,125 +11,154 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-ios:
-    name: Build iOS
+  # Build all platforms in parallel
+  build:
+    name: Build ${{ matrix.platform }}
     runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [iOS, macOS, watchOS]
+        include:
+          - platform: iOS
+            scheme: HubWorks-iOS
+            destination: 'platform=iOS Simulator,name=iPhone 17'
+          - platform: macOS
+            scheme: HubWorks-macOS
+            destination: 'platform=macOS'
+          - platform: watchOS
+            scheme: HubWorks-watchOS
+            destination: 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
-      - name: Show Swift version
-        run: swift --version
+      - name: Install dependencies
+        run: brew install xcodegen
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
 
       - name: Generate Xcode project
-        run: |
-          brew install xcodegen
-          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-          make generate
+        run: make generate
 
-      - name: Build iOS
+      - name: Build ${{ matrix.platform }}
         run: |
           xcodebuild build \
             -project HubWorks.xcodeproj \
-            -scheme HubWorks-iOS \
-            -destination 'platform=iOS Simulator,name=iPhone 17' \
+            -scheme ${{ matrix.scheme }} \
+            -destination '${{ matrix.destination }}' \
             -configuration Debug \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
-  build-macos:
-    name: Build macOS
+  # Test iOS and macOS (watchOS doesn't have tests)
+  test:
+    name: Test ${{ matrix.platform }}
     runs-on: macos-26
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [iOS, macOS]
+        include:
+          - platform: iOS
+            scheme: HubWorks-iOS
+            destination: 'platform=iOS Simulator,name=iPhone 17'
+          - platform: macOS
+            scheme: HubWorks-macOS
+            destination: 'platform=macOS'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
-      - name: Show Swift version
-        run: swift --version
+      - name: Install dependencies
+        run: brew install xcodegen
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
 
       - name: Generate Xcode project
-        run: |
-          brew install xcodegen
-          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-          make generate
+        run: make generate
 
-      - name: Build macOS
-        run: |
-          xcodebuild build \
-            -project HubWorks.xcodeproj \
-            -scheme HubWorks-macOS \
-            -destination 'platform=macOS' \
-            -configuration Debug \
-            -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO
-
-  test-ios:
-    name: Run iOS Tests
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-
-      - name: Show Swift version
-        run: swift --version
-
-      - name: Generate Xcode project
-        run: |
-          brew install xcodegen
-          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-          make generate
-
-      - name: Run iOS Tests
+      - name: Run ${{ matrix.platform }} Tests
         run: |
           xcodebuild test \
             -project HubWorks.xcodeproj \
-            -scheme HubWorks-iOS \
-            -destination 'platform=iOS Simulator,name=iPhone 17' \
+            -scheme ${{ matrix.scheme }} \
+            -destination '${{ matrix.destination }}' \
             -configuration Debug \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
 
-  test-macos:
-    name: Run macOS Tests
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-
-      - name: Show Swift version
-        run: swift --version
-
-      - name: Generate Xcode project
-        run: |
-          brew install xcodegen
-          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-          make generate
-
-      - name: Run macOS Tests
-        run: |
-          xcodebuild test \
-            -project HubWorks.xcodeproj \
-            -scheme HubWorks-macOS \
-            -destination 'platform=macOS' \
-            -configuration Debug \
-            -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO
-
+  # Code quality checks
   lint:
-    name: Lint
+    name: Lint & Format
     runs-on: macos-26
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install dependencies
+        run: brew install swiftlint swiftformat
 
       - name: Run SwiftLint
+        run: swiftlint lint --strict
+
+      - name: Check SwiftFormat
         run: |
-          brew install swiftlint
-          swiftlint lint --strict
+          swiftformat --lint . --config .swiftformat
+
+  # Verify universal binary for macOS
+  verify-universal:
+    name: Verify macOS Universal Binary
+    runs-on: macos-26
+    needs: build
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Install dependencies
+        run: brew install xcodegen
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Build for all architectures
+        run: |
+          xcodebuild build \
+            -project HubWorks.xcodeproj \
+            -scheme HubWorks-macOS \
+            -destination 'platform=macOS,arch=arm64' \
+            -destination 'platform=macOS,arch=x86_64' \
+            -configuration Release \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Verify architectures
+        run: |
+          # Find the built binary
+          BINARY=$(find ~/Library/Developer/Xcode/DerivedData -name "HubWorks" -type f -perm +111 | head -1)
+          if [ -z "$BINARY" ]; then
+            echo "❌ Binary not found"
+            exit 1
+          fi
+
+          echo "📦 Checking binary: $BINARY"
+          lipo -info "$BINARY"
+
+          # Verify both architectures are present
+          if lipo -info "$BINARY" | grep -q "arm64.*x86_64\|x86_64.*arm64"; then
+            echo "✅ Universal binary verified (arm64 + x86_64)"
+          else
+            echo "❌ Not a universal binary"
+            exit 1
+          fi

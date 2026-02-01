@@ -25,13 +25,14 @@ jobs:
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
-  build-and-upload-macos:
-    name: Build and Upload macOS App
+  # Build all platforms in parallel
+  build-ios:
+    name: Build iOS
     runs-on: macos-26
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
@@ -45,26 +46,130 @@ jobs:
       - name: Generate Xcode project
         run: make generate
 
+      - name: Archive iOS app
+        run: make archive-ios
+
+      - name: Export IPA
+        run: |
+          # Create export options plist for ad-hoc distribution
+          cat > ./build/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>development</string>
+              <key>teamID</key>
+              <string>WPW3QSLZ2F</string>
+              <key>compileBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath ./build/HubWorks-iOS.xcarchive \
+            -exportPath ./build/iOS \
+            -exportOptionsPlist ./build/ExportOptions.plist
+
+          # Rename IPA with version
+          mv ./build/iOS/HubWorks.ipa ./build/HubWorks-iOS-${{ needs.release-please.outputs.tag_name }}.ipa
+
+      - name: Upload iOS IPA
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./build/HubWorks-iOS-${{ needs.release-please.outputs.tag_name }}.ipa
+          asset_name: HubWorks-iOS-${{ needs.release-please.outputs.tag_name }}.ipa
+          asset_content_type: application/octet-stream
+
+      # Optional: Upload to TestFlight (requires App Store Connect API key)
+      # Uncomment and configure secrets to enable
+      # - name: Upload to TestFlight
+      #   if: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+      #   run: |
+      #     # Install fastlane
+      #     sudo gem install fastlane
+      #
+      #     # Create Appfile
+      #     mkdir -p fastlane
+      #     cat > fastlane/Appfile <<EOF
+      #     app_identifier("com.cedricziel.hubworks")
+      #     apple_id("${{ secrets.APPLE_ID }}")
+      #     team_id("WPW3QSLZ2F")
+      #     EOF
+      #
+      #     # Upload to TestFlight
+      #     fastlane run upload_to_testflight \
+      #       api_key_path:"${{ secrets.APP_STORE_CONNECT_API_KEY_PATH }}" \
+      #       ipa:"./build/HubWorks-iOS-${{ needs.release-please.outputs.tag_name }}.ipa" \
+      #       skip_waiting_for_build_processing:true
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-26
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Install dependencies
+        run: brew install xcodegen create-dmg
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: make generate
+
       - name: Archive macOS app
         run: make archive-macos
 
+      - name: Verify Universal Binary
+        run: |
+          APP_PATH="./build/HubWorks-macOS.xcarchive/Products/Applications/HubWorks.app/Contents/MacOS/HubWorks"
+          echo "🔍 Verifying universal binary..."
+          lipo -info "$APP_PATH"
+
+          if lipo -info "$APP_PATH" | grep -q "arm64.*x86_64\|x86_64.*arm64"; then
+            echo "✅ Universal binary verified (arm64 + x86_64)"
+          else
+            echo "❌ Not a universal binary"
+            exit 1
+          fi
+
       - name: Create DMG
         run: |
-          # Create a DMG from the archive
           APP_PATH="./build/HubWorks-macOS.xcarchive/Products/Applications/HubWorks.app"
           DMG_PATH="./build/HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg"
 
-          # Create temporary DMG directory
-          mkdir -p ./build/dmg
-          cp -R "$APP_PATH" ./build/dmg/
+          # Create DMG with create-dmg for better appearance
+          create-dmg \
+            --volname "HubWorks" \
+            --volicon "$APP_PATH/Contents/Resources/AppIcon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "HubWorks.app" 175 120 \
+            --hide-extension "HubWorks.app" \
+            --app-drop-link 425 120 \
+            "$DMG_PATH" \
+            "$APP_PATH" || \
+          # Fallback to hdiutil if create-dmg fails
+          hdiutil create -volname "HubWorks" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
 
-          # Create DMG
-          hdiutil create -volname "HubWorks" -srcfolder ./build/dmg -ov -format UDZO "$DMG_PATH"
+          echo "✅ DMG created at: $DMG_PATH"
 
-          echo "DMG created at: $DMG_PATH"
-
-      - name: Upload macOS DMG to Release
-        uses: actions/upload-release-asset@v1
+      - name: Upload macOS DMG
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -72,3 +177,61 @@ jobs:
           asset_path: ./build/HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg
           asset_name: HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg
           asset_content_type: application/x-apple-diskimage
+
+      # Optional: Notarize macOS app (requires Apple Developer credentials)
+      # Uncomment and configure secrets to enable
+      # - name: Notarize macOS app
+      #   if: ${{ secrets.APPLE_ID != '' }}
+      #   run: |
+      #     DMG_PATH="./build/HubWorks-macOS-${{ needs.release-please.outputs.tag_name }}.dmg"
+      #
+      #     # Submit for notarization
+      #     xcrun notarytool submit "$DMG_PATH" \
+      #       --apple-id "${{ secrets.APPLE_ID }}" \
+      #       --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
+      #       --team-id "WPW3QSLZ2F" \
+      #       --wait
+      #
+      #     # Staple the notarization ticket
+      #     xcrun stapler staple "$DMG_PATH"
+      #
+      #     echo "✅ macOS app notarized and stapled"
+
+  build-watchos:
+    name: Build watchOS
+    runs-on: macos-26
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Install dependencies
+        run: brew install xcodegen
+
+      - name: Setup secrets
+        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Archive watchOS app
+        run: make archive-watchos
+
+      - name: Create watchOS archive ZIP
+        run: |
+          cd ./build
+          zip -r HubWorks-watchOS-${{ needs.release-please.outputs.tag_name }}.zip HubWorks-watchOS.xcarchive
+          echo "✅ watchOS archive created"
+
+      - name: Upload watchOS Archive
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./build/HubWorks-watchOS-${{ needs.release-please.outputs.tag_name }}.zip
+          asset_name: HubWorks-watchOS-${{ needs.release-please.outputs.tag_name }}.zip
+          asset_content_type: application/zip
