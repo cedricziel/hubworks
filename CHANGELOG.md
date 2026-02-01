@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/cedricziel/hubworks/compare/HubWorks-v0.1.1...HubWorks-v0.1.2) (2026-02-01)
+
+
+### Bug Fixes
+
+* Align release workflow build steps with CI workflow ([#6](https://github.com/cedricziel/hubworks/issues/6)) ([b20049f](https://github.com/cedricziel/hubworks/commit/b20049f0923ea9dbb1c1c3b1b26e5343a8e67414))
+
 ## [0.1.1](https://github.com/cedricziel/hubworks/compare/HubWorks-v0.1.0...HubWorks-v0.1.1) (2026-02-01)
 
 
