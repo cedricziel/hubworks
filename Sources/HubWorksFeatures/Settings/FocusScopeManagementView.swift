@@ -3,6 +3,7 @@ import SwiftUI
 
 public struct FocusScopeManagementView: View {
     @Bindable var store: StoreOf<FocusScopeFeature>
+    @State private var showOnboarding = false
 
     public init(store: StoreOf<FocusScopeFeature>) {
         self.store = store
@@ -73,6 +74,14 @@ public struct FocusScopeManagementView: View {
         }
         .navigationTitle("Focus Filters")
         .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button {
+                    showOnboarding = true
+                } label: {
+                    Label("Help", systemImage: "info.circle")
+                }
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     store.send(.createNewScope)
@@ -83,6 +92,11 @@ public struct FocusScopeManagementView: View {
         }
         .onAppear {
             store.send(.onAppear)
+        }
+        .sheet(isPresented: $showOnboarding) {
+            NavigationStack {
+                FocusFilterOnboardingView()
+            }
         }
     }
 }
