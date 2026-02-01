@@ -228,9 +228,11 @@ private struct NotificationsTab: View {
         }
         .formStyle(.grouped)
         .sheet(isPresented: $showFocusFilters) {
-            FocusScopeManagementView(
-                store: store.scope(state: \.focusScopes, action: \.focusScopes)
-            )
+            NavigationStack {
+                FocusScopeManagementView(
+                    store: store.scope(state: \.focusScopes, action: \.focusScopes)
+                )
+            }
         }
     }
 }
