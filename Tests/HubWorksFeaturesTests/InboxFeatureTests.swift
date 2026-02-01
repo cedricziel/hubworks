@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import ConcurrencyExtras
 import Foundation
 import Testing
 @testable import HubWorksCore
@@ -258,7 +259,7 @@ struct InboxFeatureTests {
     @Test("Opens notification URL and marks as read when tapped with URL")
     @MainActor
     func notificationTappedOpensURLAndMarksAsRead() async throws {
-        var openedURL: URL?
+        let openedURL = LockIsolated<URL?>(nil)
         let testURL = try #require(URL(string: "https://github.com/owner/repo/issues/123"))
 
         let store = TestStore(
@@ -267,7 +268,7 @@ struct InboxFeatureTests {
             InboxFeature()
         } withDependencies: {
             $0.urlOpener.open = { url in
-                openedURL = url
+                openedURL.setValue(url)
                 return true
             }
             $0.keychainService.load = { _ in Data("test-token".utf8) }
@@ -281,13 +282,13 @@ struct InboxFeatureTests {
             $0.selectedNotificationId = "thread-123"
         }
 
-        #expect(openedURL == testURL)
+        #expect(openedURL.value == testURL)
     }
 
     @Test("Marks as read when notification has no URL")
     @MainActor
     func notificationTappedWithoutURLJustMarksAsRead() async {
-        var urlOpenerCalled = false
+        let urlOpenerCalled = LockIsolated(false)
 
         let store = TestStore(
             initialState: InboxFeature.State()
@@ -295,7 +296,7 @@ struct InboxFeatureTests {
             InboxFeature()
         } withDependencies: {
             $0.urlOpener.open = { _ in
-                urlOpenerCalled = true
+                urlOpenerCalled.setValue(true)
                 return false
             }
             $0.keychainService.load = { _ in Data("test-token".utf8) }
@@ -309,6 +310,6 @@ struct InboxFeatureTests {
             $0.selectedNotificationId = "thread-123"
         }
 
-        #expect(urlOpenerCalled == false)
+        #expect(urlOpenerCalled.value == false)
     }
 }

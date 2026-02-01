@@ -12,17 +12,14 @@ public struct URLOpenerService: Sendable {
 }
 
 extension URLOpenerService: DependencyKey {
-    public static let liveValue = URLOpenerService { url in
+    public static let liveValue = URLOpenerService { @MainActor url in
         #if os(macOS)
-        await MainActor.run {
-            NSWorkspace.shared.open(url)
-        }
+        return NSWorkspace.shared.open(url)
         #elseif os(iOS)
-        await MainActor.run {
-            await UIApplication.shared.open(url)
-        }
+        await UIApplication.shared.open(url)
+        return true
         #else
-        false
+        return false
         #endif
     }
 
