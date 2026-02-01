@@ -37,14 +37,14 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
-      - name: Install dependencies
-        run: brew install xcodegen
-
-      - name: Setup secrets
-        run: cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+      - name: Show Swift version
+        run: swift --version
 
       - name: Generate Xcode project
-        run: make generate
+        run: |
+          brew install xcodegen
+          cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+          make generate
 
       - name: Archive iOS app
         run: make archive-ios
