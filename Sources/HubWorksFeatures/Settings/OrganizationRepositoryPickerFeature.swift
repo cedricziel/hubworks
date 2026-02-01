@@ -4,7 +4,7 @@ import HubWorksCore
 
 @Reducer
 public struct OrganizationRepositoryPickerFeature: Sendable {
-    @Dependency(OrganizationRepositoryService.self) var organizationRepositoryService
+    @Dependency(OrganizationRepositoryService.self) private var organizationRepositoryService
 
     @ObservableState
     public struct State: Equatable {

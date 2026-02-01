@@ -83,19 +83,19 @@ public struct ScopeEditorFeature: Sendable {
     }
 
     public struct ScopeData: Sendable, Equatable {
-        let id: String
-        let name: String
-        let emoji: String
-        let colorHex: String
-        let organizations: [String]
-        let repositories: [String]
-        let quietHoursEnabled: Bool
-        let quietHoursStart: Int
-        let quietHoursEnd: Int
-        let quietHoursDays: [Int]
-        let isDefault: Bool
+        public let id: String
+        public let name: String
+        public let emoji: String
+        public let colorHex: String
+        public let organizations: [String]
+        public let repositories: [String]
+        public let quietHoursEnabled: Bool
+        public let quietHoursStart: Int
+        public let quietHoursEnd: Int
+        public let quietHoursDays: [Int]
+        public let isDefault: Bool
 
-        init(from scope: NotificationScope) {
+        public init(from scope: NotificationScope) {
             id = scope.id
             name = scope.name
             emoji = scope.emoji
@@ -115,7 +115,7 @@ public struct ScopeEditorFeature: Sendable {
             }
         }
 
-        init(from state: ScopeEditorFeature.State) {
+        public init(from state: ScopeEditorFeature.State) {
             id = state.scopeId ?? UUID().uuidString
             name = state.name
             emoji = state.emoji
@@ -157,7 +157,7 @@ public struct ScopeEditorFeature: Sendable {
         }
     }
 
-    @Dependency(\.dismiss) var dismiss
+    @Dependency(\.dismiss) public var dismiss
 
     public init() {}
 

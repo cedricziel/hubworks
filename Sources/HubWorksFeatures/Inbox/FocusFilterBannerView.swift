@@ -23,7 +23,7 @@ public struct FocusFilterBannerView: View {
             Text(scopeEmoji)
                 .font(.title2)
 
-            Text("Showing only \(scopeName) notifications")
+            Text(isEnabled ? "Showing only \(scopeName) notifications" : "Filtering paused — showing all notifications")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
