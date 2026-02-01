@@ -66,5 +66,6 @@
 --disable acronyms
 --disable blankLinesAtStartOfScope
 --disable blankLinesAtEndOfScope
+--disable docComments
 --disable modifierOrder
 --exclude .build,DerivedData,Pods
