@@ -14,8 +14,10 @@ fi
 PROJECT_ROOT="${SRCROOT}"
 
 # Calculate build number from git commit count
+# Use origin/main to ensure monotonic increase even with squash merges
+# Falls back to HEAD if origin/main doesn't exist (e.g., fresh clone)
 if [ -d "${PROJECT_ROOT}/.git" ]; then
-    BUILD_NUMBER=$(git -C "${PROJECT_ROOT}" rev-list --count HEAD)
+    BUILD_NUMBER=$(git -C "${PROJECT_ROOT}" rev-list --count origin/main 2>/dev/null || git -C "${PROJECT_ROOT}" rev-list --count HEAD)
     echo "📊 Calculated build number from git: ${BUILD_NUMBER}"
 else
     echo "⚠️ Not a git repository, keeping existing build number"

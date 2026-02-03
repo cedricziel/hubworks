@@ -68,7 +68,7 @@ build-all: build
 # Archive individual platforms with auto-incremented build number
 archive-ios:
 	@echo "📦 Archiving iOS app..."
-	@BUILD_NUMBER=$$(git rev-list --count HEAD); \
+	@BUILD_NUMBER=$$(git rev-list --count origin/main 2>/dev/null || git rev-list --count HEAD); \
 	sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$$BUILD_NUMBER\"/g" project.yml
 	@make generate
 	@mkdir -p build
@@ -82,7 +82,7 @@ archive-ios:
 
 archive-macos:
 	@echo "📦 Archiving macOS app..."
-	@BUILD_NUMBER=$$(git rev-list --count HEAD); \
+	@BUILD_NUMBER=$$(git rev-list --count origin/main 2>/dev/null || git rev-list --count HEAD); \
 	sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$$BUILD_NUMBER\"/g" project.yml
 	@make generate
 	@mkdir -p build
@@ -96,7 +96,7 @@ archive-macos:
 
 archive-watchos:
 	@echo "📦 Archiving watchOS app..."
-	@BUILD_NUMBER=$$(git rev-list --count HEAD); \
+	@BUILD_NUMBER=$$(git rev-list --count origin/main 2>/dev/null || git rev-list --count HEAD); \
 	sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$$BUILD_NUMBER\"/g" project.yml
 	@make generate
 	@mkdir -p build
