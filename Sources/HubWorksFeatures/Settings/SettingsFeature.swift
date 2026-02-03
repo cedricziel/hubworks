@@ -15,6 +15,7 @@ public struct SettingsFeature: Sendable {
         public var groupByRepository: Bool = true
         public var appVersion: String = "1.0.0"
         public var buildNumber: String = "1"
+        public var focusScopes: FocusScopeFeature.State = .init()
 
         public struct AccountState: Equatable, Identifiable, Sendable {
             public let id: String
@@ -44,7 +45,8 @@ public struct SettingsFeature: Sendable {
             showUnreadBadge: Bool = true,
             groupByRepository: Bool = true,
             appVersion: String = "1.0.0",
-            buildNumber: String = "1"
+            buildNumber: String = "1",
+            focusScopes: FocusScopeFeature.State = .init()
         ) {
             self.accounts = accounts
             self.isLoadingUser = isLoadingUser
@@ -55,6 +57,7 @@ public struct SettingsFeature: Sendable {
             self.groupByRepository = groupByRepository
             self.appVersion = appVersion
             self.buildNumber = buildNumber
+            self.focusScopes = focusScopes
         }
     }
 
@@ -67,22 +70,29 @@ public struct SettingsFeature: Sendable {
         case addAccountTapped
         case removeAccount(String)
         case removeAccountCompleted(String)
+        case removeAccountFailed(String, String)
         case pollIntervalChanged(Int)
         case notificationsEnabledChanged(Bool)
         case showUnreadBadgeChanged(Bool)
         case groupByRepositoryChanged(Bool)
         case signOutTapped
         case signOutCompleted
+        case focusScopes(FocusScopeFeature.Action)
     }
 
-    @Dependency(\.keychainService) var keychainService
-    @Dependency(\.localNotificationService) var localNotificationService
-    @Dependency(\.gitHubAPIClient) var gitHubAPIClient
+    @Dependency(\.keychainService) private var keychainService
+    @Dependency(\.localNotificationService) private var localNotificationService
+    @Dependency(\.gitHubAPIClient) private var gitHubAPIClient
+    @Dependency(\.accountCleanupService) private var accountCleanupService
 
     public init() {}
 
     // swiftformat:disable indent
     public var body: some ReducerOf<Self> {
+        Scope(state: \.focusScopes, action: \.focusScopes) {
+            FocusScopeFeature()
+        }
+
         Reduce { state, action in
             switch action {
             case .onAppear:
@@ -133,12 +143,20 @@ public struct SettingsFeature: Sendable {
 
             case let .removeAccount(accountId):
                 return .run { send in
-                    try? keychainService.delete("github_oauth_token_\(accountId)")
-                    await send(.removeAccountCompleted(accountId))
+                    do {
+                        try await accountCleanupService.cleanupAccount(accountId)
+                        await send(.removeAccountCompleted(accountId))
+                    } catch {
+                        await send(.removeAccountFailed(accountId, error.localizedDescription))
+                    }
                 }
 
             case let .removeAccountCompleted(accountId):
                 state.accounts.removeAll { $0.id == accountId }
+                return .none
+
+            case let .removeAccountFailed(accountId, errorMessage):
+                state.userLoadError = "Failed to remove account \(accountId): \(errorMessage)"
                 return .none
 
             case let .pollIntervalChanged(interval):
@@ -170,6 +188,9 @@ public struct SettingsFeature: Sendable {
 
             case .signOutCompleted:
                 state.accounts = []
+                return .none
+
+            case .focusScopes:
                 return .none
             }
         }

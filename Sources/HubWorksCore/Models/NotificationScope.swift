@@ -83,10 +83,26 @@ extension NotificationScope {
             return currentHour >= quietHoursStart || currentHour < quietHoursEnd
         }
     }
+
+    /// Check if a notification matches this scope's rules
+    public func matchesNotification(_ notification: CachedNotification) -> Bool {
+        guard let rules, !rules.isEmpty else {
+            return true // No rules = match all
+        }
+
+        // Match if ANY rule matches
+        return rules.contains { rule in
+            !rule.isMuted && rule.matches(
+                repository: notification.repositoryFullName,
+                organization: notification.repositoryOwner,
+                reason: notification.reason
+            )
+        }
+    }
 }
 
 extension Color {
-    init?(hex: String) {
+    public init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
 
