@@ -87,7 +87,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: 0.1.1
+        MARKETING_VERSION: 0.1.2
         CURRENT_PROJECT_VERSION: '1'
     info:
       path: Apps/HubWorks-iOS/Info.plist
@@ -166,7 +166,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: 0.1.1
+        MARKETING_VERSION: 0.1.2
         CURRENT_PROJECT_VERSION: '1'
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
@@ -219,7 +219,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: WPW3QSLZ2F
         PRODUCT_NAME: HubWorks
-        MARKETING_VERSION: 0.1.1
+        MARKETING_VERSION: 0.1.2
         CURRENT_PROJECT_VERSION: '1'
     info:
       path: Apps/HubWorks-watchOS/Info.plist
