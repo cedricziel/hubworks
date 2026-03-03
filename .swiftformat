@@ -40,8 +40,8 @@
 --enable redundantType
 --enable redundantVoidReturnType
 --enable semicolons
---enable sortedImports
---enable sortedSwitchCases
+--enable sortImports
+--enable sortSwitchCases
 --enable spaceAroundBraces
 --enable spaceAroundBrackets
 --enable spaceAroundComments
@@ -66,5 +66,6 @@
 --disable acronyms
 --disable blankLinesAtStartOfScope
 --disable blankLinesAtEndOfScope
+--disable docComments
 --disable modifierOrder
 --exclude .build,DerivedData,Pods

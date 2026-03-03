@@ -50,13 +50,15 @@ public struct AuthFeature: Sendable {
         case authenticationCompleted(GitHubUser)
         case signOutTapped
         case signOutCompleted
+        case signOutFailed(String)
         case clearError
         case cancelAuthTapped
     }
 
-    @Dependency(\.oauthService) var oauthService
-    @Dependency(\.keychainService) var keychainService
-    @Dependency(\.gitHubAPIClient) var gitHubAPIClient
+    @Dependency(\.oauthService) private var oauthService
+    @Dependency(\.keychainService) private var keychainService
+    @Dependency(\.gitHubAPIClient) private var gitHubAPIClient
+    @Dependency(\.accountCleanupService) private var accountCleanupService
 
     public init() {}
 
@@ -164,12 +166,20 @@ public struct AuthFeature: Sendable {
 
                 case .signOutTapped:
                     return .run { send in
-                        try? keychainService.delete("github_oauth_token_default")
-                        await send(.signOutCompleted)
+                        do {
+                            try await accountCleanupService.cleanupAccount("default")
+                            await send(.signOutCompleted)
+                        } catch {
+                            await send(.signOutFailed(error.localizedDescription))
+                        }
                     }
 
                 case .signOutCompleted:
                     state.currentUser = nil
+                    return .none
+
+                case let .signOutFailed(errorMessage):
+                    state.error = "Failed to sign out: \(errorMessage)"
                     return .none
 
                 case .clearError:

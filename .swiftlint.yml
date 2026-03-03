@@ -56,10 +56,12 @@ opt_in_rules:
   - unavailable_function
   - unneeded_parentheses_in_closure_argument
   - unowned_variable_capture
-  - unused_import
   - vertical_parameter_alignment_on_call
   - xct_specific_matcher
   - yoda_condition
+
+analyzer_rules:
+  - unused_import
 
 included:
   - Sources

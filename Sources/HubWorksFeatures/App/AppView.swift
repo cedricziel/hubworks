@@ -5,6 +5,7 @@ import SwiftUI
 
 public struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(store: StoreOf<AppFeature>) {
         self.store = store
@@ -24,6 +25,13 @@ public struct AppView: View {
         }
         .onAppear {
             store.send(.onAppear)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            store.send(.scenePhaseChanged(newPhase))
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .activeFocusScopeChanged)) { _ in
+            // Trigger a check for the active Focus scope when it changes
+            store.send(.inbox(.checkActiveFocusScope))
         }
     }
 

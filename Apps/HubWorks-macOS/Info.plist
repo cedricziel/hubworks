@@ -39,6 +39,8 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
+	<key>NSSupportsLiveFocusFilters</key>
+	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2025 HubWorks. All rights reserved.</string>
 </dict>

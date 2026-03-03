@@ -44,11 +44,13 @@ public struct AppFeature: Sendable {
         case auth(AuthFeature.Action)
         case backgroundRefreshTriggered
         case backgroundRefreshCompleted(Bool)
+        case scenePhaseChanged(ScenePhase)
     }
 
-    @Dependency(\.keychainService) var keychainService
-    @Dependency(\.backgroundRefreshManager) var backgroundRefreshManager
-    @Dependency(\.localNotificationService) var localNotificationService
+    @Dependency(\.keychainService) private var keychainService
+    @Dependency(\.backgroundRefreshManager) private var backgroundRefreshManager
+    @Dependency(\.localNotificationService) private var localNotificationService
+    @Dependency(\.accountCleanupService) private var accountCleanupService
 
     public init() {}
 
@@ -67,6 +69,9 @@ public struct AppFeature: Sendable {
             switch action {
                 case .onAppear:
                     return .run { send in
+                        // Clean up any orphaned data from previous sessions or bundle ID changes
+                        try? await accountCleanupService.validateAndCleanupOrphans()
+
                         // Check if we have any stored tokens
                         let hasToken = keychainService.exists("github_oauth_token_default")
                         await send(.checkAuthenticationCompleted(hasToken))
@@ -112,6 +117,17 @@ public struct AppFeature: Sendable {
 
                 case .backgroundRefreshCompleted:
                     return .none
+
+                case let .scenePhaseChanged(phase):
+                    // Check for Focus scope changes when app becomes active
+                    switch phase {
+                        case .active:
+                            return .send(.inbox(.checkActiveFocusScope))
+                        case .background, .inactive:
+                            return .none
+                        @unknown default:
+                            return .none
+                    }
             }
         }
     }

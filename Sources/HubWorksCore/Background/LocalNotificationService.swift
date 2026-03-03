@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import SwiftData
 import UserNotifications
 
 public struct NotificationContent: Equatable, Sendable {
@@ -11,6 +12,9 @@ public struct NotificationContent: Equatable, Sendable {
     public let categoryId: String?
     public let userInfo: [String: String]
     public let playSound: Bool
+    public let repositoryFullName: String
+    public let repositoryOwner: String
+    public let reason: String
 
     public init(
         id: String,
@@ -20,7 +24,10 @@ public struct NotificationContent: Equatable, Sendable {
         threadId: String,
         categoryId: String? = nil,
         userInfo: [String: String] = [:],
-        playSound: Bool = true
+        playSound: Bool = true,
+        repositoryFullName: String,
+        repositoryOwner: String,
+        reason: String
     ) {
         self.id = id
         self.title = title
@@ -30,6 +37,9 @@ public struct NotificationContent: Equatable, Sendable {
         self.categoryId = categoryId
         self.userInfo = userInfo
         self.playSound = playSound
+        self.repositoryFullName = repositoryFullName
+        self.repositoryOwner = repositoryOwner
+        self.reason = reason
     }
 }
 
@@ -67,6 +77,13 @@ extension LocalNotificationService: DependencyKey {
         },
 
         scheduleNotification: { content in
+            // Check if notification should be delivered based on active Focus scope
+            let shouldDeliver = await checkNotificationMatchesActiveScope(content)
+            guard shouldDeliver else {
+                return // Don't deliver - doesn't match active Focus scope
+            }
+
+            // Proceed with normal notification delivery
             let notificationContent = UNMutableNotificationContent()
             notificationContent.title = content.title
             notificationContent.body = content.body
@@ -176,6 +193,54 @@ extension DependencyValues {
     }
 }
 
+// MARK: - Helper Functions
+
+@MainActor
+private func checkNotificationMatchesActiveScope(_ content: NotificationContent) async -> Bool {
+    // Check if there's an active Focus scope
+    let activeScopeId = UserDefaults.standard.string(forKey: "active_focus_scope_id")
+
+    guard let activeScopeId else {
+        return true // No active scope, deliver notification
+    }
+
+    // Load active scope and check if notification matches
+    let container = HubWorksCore.modelContainer
+    let context = container.mainContext
+
+    let predicate = #Predicate<NotificationScope> { $0.id == activeScopeId }
+    let descriptor = FetchDescriptor<NotificationScope>(predicate: predicate)
+
+    guard let activeScope = try? context.fetch(descriptor).first else {
+        return true // Scope not found, deliver notification
+    }
+
+    // Create a temporary CachedNotification to check against scope rules
+    let notificationReason = NotificationReason(rawValue: content.reason) ?? .subscribed
+    let tempNotification = CachedNotification(
+        id: content.id,
+        threadId: content.threadId,
+        accountId: "",
+        unread: true,
+        reason: notificationReason,
+        updatedAt: Date(),
+        lastReadAt: nil,
+        subjectTitle: content.body,
+        subjectType: .issue,
+        subjectURL: nil,
+        latestCommentURL: nil,
+        repositoryId: 0,
+        repositoryName: "",
+        repositoryFullName: content.repositoryFullName,
+        repositoryOwner: content.repositoryOwner,
+        repositoryAvatarURL: nil,
+        isPrivateRepository: false
+    )
+
+    // Check if notification matches the active scope
+    return activeScope.matchesNotification(tempNotification)
+}
+
 extension LocalNotificationService {
     public func notificationContent(
         from notification: CachedNotification,
@@ -210,7 +275,10 @@ extension LocalNotificationService {
                 "threadId": notification.threadId,
                 "accountId": notification.accountId,
                 "repositoryFullName": notification.repositoryFullName,
-            ]
+            ],
+            repositoryFullName: notification.repositoryFullName,
+            repositoryOwner: notification.repositoryOwner,
+            reason: notification.reason.rawValue
         )
     }
 }

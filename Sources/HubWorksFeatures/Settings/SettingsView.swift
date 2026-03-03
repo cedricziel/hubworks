@@ -31,7 +31,7 @@ public struct SettingsView: View {
                     Label("General", systemImage: "info.circle")
                 }
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 700, height: 550)
         .onAppear {
             store.send(.onAppear)
         }
@@ -163,6 +163,7 @@ private struct AccountRow: View {
 
 private struct NotificationsTab: View {
     @Bindable var store: StoreOf<SettingsFeature>
+    @State private var showFocusFilters = false
 
     var body: some View {
         Form {
@@ -203,8 +204,36 @@ private struct NotificationsTab: View {
             } footer: {
                 Text("How often HubWorks checks GitHub for new notifications. More frequent polling uses more battery and API quota.")
             }
+
+            Section {
+                Button {
+                    showFocusFilters = true
+                } label: {
+                    HStack {
+                        Label("Focus Filters", systemImage: "moon.stars")
+                        Spacer()
+                        Text("Configure...")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            } header: {
+                Text("Focus Modes")
+            } footer: {
+                Text("""
+                Configure notification filters for different Focus modes. \
+                Filter notifications by organizations and repositories based on your active Focus.
+                """)
+            }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $showFocusFilters) {
+            NavigationStack {
+                FocusScopeManagementView(
+                    store: store.scope(state: \.focusScopes, action: \.focusScopes)
+                )
+            }
+        }
     }
 }
 
